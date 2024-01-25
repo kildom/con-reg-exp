@@ -1,4 +1,24 @@
-import { TextToken, Token, TokenType, tokenize } from "./tokenizer";
+import { TextToken, Token, TokenType, randPrefixForText, tokenize } from "./tokenizer";
+
+interface Flags {
+    multiline: boolean;
+    indices: boolean;
+    global: boolean;
+    ignoreCase: boolean;
+    unicode: boolean;
+    sticky: boolean;
+}
+
+const flagsDefaults: Flags = {
+    multiline: true,
+    indices: false,
+    global: true,
+    ignoreCase: false,
+    unicode: false,
+    sticky: false,
+};
+
+const verboseRegExpTokens = Symbol('verboseRegExpTokens');
 
 function escapeRegExp(text: string) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -10,12 +30,7 @@ function escapeCharacterClass(text: string) {
 
 class Context {
     private index: number;
-    public multiline: boolean = true;
-    public indices: boolean = false;
-    public global: boolean = true;
-    public ignoreCase: boolean = false;
-    public unicode: boolean = false;
-    public sticky: boolean = false;
+    public flags: Flags = { ...flagsDefaults };
 
     public constructor(
         private tokens: Token[]
@@ -34,7 +49,7 @@ class Context {
 
 abstract class Expression {
     public constructor(
-        public position: number
+        public position: number[]
     ) { }
     public generateAtom(): string {
         return `(?:${this.generate()})`;
@@ -47,9 +62,9 @@ abstract class Expression {
 class List extends Expression {
     public items: Expression[];
 
-    public constructor(items: number | Expression[]) {
-        super(items instanceof Array ? items[0].position : items);
-        this.items = items instanceof Array ? items : [];
+    public constructor(items: number[] | Expression[]) {
+        super(items[0] instanceof Expression ? items[0].position : items as number[]);
+        this.items = items[0] instanceof Expression ? items as Expression[] : [];
         if (this.items.length === 1) {
             throw new Error(`Internal error at: ${this.position}`);
         }
@@ -81,13 +96,13 @@ class OrExpression extends Expression {
 }
 
 class InvertibleExpression extends Expression {
-    public constructor(position: number, public negative: boolean) {
+    public constructor(position: number[], public negative: boolean) {
         super(position);
     }
 }
 
 class CharacterClassEscape extends InvertibleExpression {
-    public escapedText: string;
+    public escapedText!: string;
     static complementaryValue: { [key: string]: string } = {
         '\\d': '\\D',
         '\\D': '\\d',
@@ -96,7 +111,7 @@ class CharacterClassEscape extends InvertibleExpression {
         '\\w': '\\W',
         '\\W': '\\w',
     };
-    static keywords = {
+    static keywords: { [keyword: string]: string } = {
         'digit': '\\d',
         'white-space': '\\s',
         'whitespace': '\\s',
@@ -124,8 +139,8 @@ class CharacterClassEscape extends InvertibleExpression {
 };
 
 class CharacterClassSingle extends InvertibleExpression {
-    public unescapedText: string;
-    static keywords = {
+    public unescapedText!: string;
+    static keywords: { [keyword: string]: string } = {
         '\\n': '\n', 'nl': '\n', 'new-line': '\n', 'lf': '\n', 'line-feed': '\n',
         '\\r': '\r', 'cr': '\r', 'carriage-return': '\r',
         '\\t': '\t', 'tab': '\t', 'tabulation': '\t',
@@ -170,8 +185,8 @@ class CharacterClassAny extends Expression {
 };
 
 class CharacterClassRange extends InvertibleExpression {
-    public escapedText: string;
-    static keywords = {
+    public escapedText!: string;
+    static keywords: { [keyword: string]: string } = {
         'line-terminator': '\\r\\n\\u2028\\u2029', 'line-term': '\\r\\n\\u2028\\u2029',
         'terminator': '\\r\\n\\u2028\\u2029', 'term': '\\r\\n\\u2028\\u2029',
     };
@@ -192,7 +207,7 @@ class CharacterClassRange extends InvertibleExpression {
 };
 
 class Literal extends Expression {
-    public unescapedText: string;
+    public unescapedText!: string;
     static create(token: Token) {
         let obj: Literal | undefined = undefined;
         if (token.type === TokenType.Literal) {
@@ -207,7 +222,7 @@ class Literal extends Expression {
 };
 
 class Backreference extends Expression {
-    public text: string;
+    public text!: string;
     static create(token: Token, ctx: Context) {
         let obj: Backreference | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'match') {
@@ -243,8 +258,8 @@ class WordBoundary extends InvertibleExpression {
 };
 
 class LineBoundary extends InvertibleExpression {
-    public start: boolean;
-    public ctx: Context;
+    public start!: boolean;
+    public flags!: Flags;
     static create(token: Token, ctx: Context) {
         let obj: LineBoundary | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'begin-of-line'
@@ -252,12 +267,12 @@ class LineBoundary extends InvertibleExpression {
         ) {
             obj = new LineBoundary(token.position, false);
             obj.start = (token.text !== 'end-of-line');
-            obj.ctx = ctx;
+            obj.flags = ctx.flags;
         }
         return obj;
     }
     public generateAtom(): string {
-        if (this.ctx.multiline) {
+        if (this.flags.multiline) {
             return this.start
                 ? (this.negative ? '(?<!^)' : '^')
                 : (this.negative ? '(?!$)' : '$');
@@ -270,8 +285,8 @@ class LineBoundary extends InvertibleExpression {
 };
 
 class TextBoundary extends InvertibleExpression {
-    public start: boolean;
-    public negative: boolean;
+    public start!: boolean;
+    public negative!: boolean;
     static create(token: Token, ctx: Context) {
         let obj: TextBoundary | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'begin-of-text'
@@ -279,7 +294,7 @@ class TextBoundary extends InvertibleExpression {
         ) {
             obj = new TextBoundary(token.position, false);
             obj.start = (token.text !== 'end-of-text');
-            ctx.multiline = false;
+            ctx.flags.multiline = false;
         }
         return obj;
     }
@@ -291,8 +306,8 @@ class TextBoundary extends InvertibleExpression {
 };
 
 class Group extends Expression {
-    public id: string | undefined;
-    public child: Expression;
+    public id!: string | undefined;
+    public child!: Expression;
     static create(token: Token, ctx: Context) {
         let obj: Group | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'group') {
@@ -318,9 +333,9 @@ class Group extends Expression {
 };
 
 class LookGroup extends Expression {
-    public ahead: boolean;
-    public negative: boolean;
-    public child: Expression;
+    public ahead!: boolean;
+    public negative!: boolean;
+    public child!: Expression;
     static create(token: Token, ctx: Context) {
         let obj: LookGroup | undefined = undefined;
         let m: RegExpMatchArray | null;
@@ -347,7 +362,7 @@ class Quantifier extends Expression {
     public min: number = 0;
     public max: number = Infinity;
     public lazy: boolean = false;
-    public child: Expression;
+    public child!: Expression;
     static create(token: Token, ctx: Context) {
         let obj: Quantifier | undefined = undefined;
         let m: RegExpMatchArray | null;
@@ -439,7 +454,7 @@ function parseList(ctx: Context): Expression {
         }
     } while (true);
     if (items.length === 0) {
-        return new List(ctx.peek()?.position || 0);
+        return new List(ctx.peek()?.position || [0]);
     } else if (items.length === 1) {
         return items[0];
     } else {
@@ -478,6 +493,14 @@ function parseLeaf(ctx: Context): Expression {
         } else {
             throw new Error(`The "not" keyword is not allowed before this expression at: ${token.position}`);
         }
+    } else if (token.type === TokenType.Keyword && token.text === '__sub__') {
+        let subFlags = getFlags(ctx);
+        if (ctx.flags.ignoreCase !== subFlags.ignoreCase) {
+            throw new Error('Mismatching "ignore-case" flag in sub-expression.');
+        } else if (ctx.flags.unicode !== subFlags.unicode) {
+            throw new Error('Mismatching "unicode" flag in sub-expression.');
+        }
+        exp = parseLeaf(ctx);
     } else {
         exp = CharacterClassEscape.create(token)
             || CharacterClassSingle.create(token)
@@ -500,59 +523,65 @@ function parseLeaf(ctx: Context): Expression {
     return exp;
 }
 
-export function parse(text: string, prefix: string, values: string[]): RegExp {
-
-    let tokens = tokenize(text, prefix, values);
-    console.log(tokens);
-    return new RegExp('');
-    let ctx = new Context(tokens);
-
+function getFlags(ctx: Context) {
+    let flags = { ...flagsDefaults };
     while (ctx.peek()?.type === TokenType.Identifier) {
         let flagToken = ctx.read() as TextToken;
-        let flagItems = flagToken.text.split(/\s*,\s*/);
+        let flagItems = flagToken.text.split(/[\s,;]+/);
         for (let flag of flagItems) {
             switch (flag.toLowerCase()) {
+                case '':
+                    // ignore
+                    break;
                 case 'indices':
-                    ctx.indices = true;
+                    flags.indices = true;
                     break;
                 case 'first':
-                    ctx.global = false;
+                    flags.global = false;
                     break;
                 case 'ignore-case':
                 case 'case-insensitive':
-                    ctx.ignoreCase = true;
+                    flags.ignoreCase = true;
                     break;
                 case 'unicode':
-                    ctx.unicode = true;
+                    flags.unicode = true;
                     break;
                 case 'sticky':
-                    ctx.sticky = true;
+                    flags.sticky = true;
                     break;
                 default:
                     throw new Error(`Unknown flag "${flag}" at: ${flagToken.position}`);
             }
         }
     }
+    return flags;
+}
+
+export function parse(text: string, prefix: string, values: (string | Token[])[]): RegExp {
+
+    let tokens = tokenize(text, prefix, values);
+    //console.log(tokens); return new RegExp('');
+    let ctx = new Context(tokens);
+    ctx.flags = getFlags(ctx);
 
     let expr = parseOr(ctx);
     let pattern = expr.generate();
     let flags = 's';
-    if (ctx.indices) flags += 'd';
-    if (ctx.global) flags += 'g';
-    if (ctx.ignoreCase) flags += 'i';
-    if (ctx.multiline) flags += 'm';
-    if (ctx.unicode) flags += 'u';
-    // TODO: implement v flag: if (ctx.unicodeSets) flags += 'v';
-    if (ctx.sticky) flags += 'y';
+    if (ctx.flags.indices) flags += 'd';
+    if (ctx.flags.global) flags += 'g';
+    if (ctx.flags.ignoreCase) flags += 'i';
+    if (ctx.flags.multiline) flags += 'm';
+    if (ctx.flags.unicode) flags += 'u';
+    // TODO: implement v flag: if (ctx.flags.unicodeSets) flags += 'v';
+    if (ctx.flags.sticky) flags += 'y';
 
-    return new RegExp(pattern, flags);
-}
-
-function randPrefix(length: number): string {
-    let result = '`';
-    for (let i = 0; i < length; i++) {
-        result += String.fromCharCode(65 + Math.floor(Math.random() * 26));
-    }
+    let result = new RegExp(pattern, flags);
+    Object.defineProperty(result, verboseRegExpTokens, {
+        configurable: false,
+        enumerable: false,
+        value: tokens,
+        writable: false,
+    });
     return result;
 }
 
@@ -560,25 +589,30 @@ function randPrefix(length: number): string {
 
 export function verboseRegExp(str: TemplateStringsArray, ...values: any[]) {
     let raw = str.raw;
-    let prefix = randPrefix(3);
-    while (raw.some(x => x.indexOf(prefix) >= 0)) {
-        prefix = randPrefix(prefix.length + 1);
-    }
+    let prefix = randPrefixForText(raw);
     let input = raw[0];
-    let valuesStr: string[] = [];
+    let valuesProcessed: (string | Token[])[] = [];
     for (let i = 0; i < values.length; i++) {
-        // TODO: if value is verboseRegExp, take raw strings and values from it and merge them here.
+        let value = values[i];
         input += prefix + i + '}' + raw[i + 1];
-        valuesStr.push(`${values[i]}`);
+        if (value instanceof RegExp && value[verboseRegExpTokens]) {
+            valuesProcessed.push(value[verboseRegExpTokens] as Token[]);
+        } else {
+            valuesProcessed.push(`${values[i]}`);
+        }
     }
-    return parse(input, prefix, valuesStr);
+    return parse(input, prefix, valuesProcessed);
+}
+
+export function vre(str: TemplateStringsArray, ...values: any[]) {
+    return verboseRegExp(str, ...values);
 }
 
 let a = "Thi\"\\`\`s$ is [test]";
 let b = "not [x-y]";
 
-console.log(verboseRegExp`
-<FIRST> <IGNORE-CASE> <STICKY>
+/*console.log(verboseRegExp`
+<FIRST, IGNORE-CASE, STICKY>
 
 repeat whitespace // ignore leading whitespace
 
@@ -623,7 +657,7 @@ or
 or
     // Multiline comment
     group<comment1> {
-        "/*" lazy-repeat any "*/"
+        "/*" lazy-repeat any "* /"
     }
 or
     // Singleline comment
@@ -633,8 +667,10 @@ or
 }
 
 repeat whitespace // ignore trailing whitespace
-`);
+`);*/
 
-let sub = "a b c";
+let ic = '<IGNORE-CASE> any';
 
-console.log(verboseRegExp`x y ${sub} z w`);
+let sub = vre`<IGNORE-CASE> "a" "b" "c" ${ic}`;
+
+console.log(vre`<IGNORE-CASE> "x" "y" ${sub} "z" "w"`);

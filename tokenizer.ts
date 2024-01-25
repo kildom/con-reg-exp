@@ -1,6 +1,4 @@
 
-
-
 export enum TokenType {
     Literal,
     Identifier,
@@ -12,20 +10,20 @@ export enum TokenType {
 
 export interface TextToken {
     type: TokenType.Literal | TokenType.Identifier | TokenType.Keyword;
-    position: number;
+    position: number[];
     text: string;
 }
 
 export interface CharacterClassToken {
     type: TokenType.CharacterClass;
-    position: number;
+    position: number[];
     text: string;
     complement: boolean;
 }
 
 export interface TextLessToken {
     type: TokenType.Begin | TokenType.End;
-    position: number;
+    position: number[];
 }
 
 export type Token = TextToken | CharacterClassToken | TextLessToken;
@@ -44,89 +42,100 @@ interface TokenRegexGroups {
     comment2?: string;
 }
 
-const tokenRegex = /\s*(?:(?<begin>[{(])|(?<end>[})])|(?<keyword>[a-z0-9\\-]+)|(?<literal>"(?:\\[\s\S]|[\s\S])*?")|(?:<(?<identifier>[\s\S]*?)>)|(?:\[(?<complement>\^)?(?<characterClass>(?:\\[\s\S]|[\s\S])*?)\])|(?:(?<prefix>`[A-Z]+)(?<index>[0-9]+)\})|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?(?:\n|$)))\s*/isy;
-`
-<FIRST> <IGNORE-CASE> <STICKY>
+const tokenRegexBase = /*vre
+    <FIRST> <IGNORE-CASE> <STICKY>
 
-repeat whitespace // ignore leading whitespace
+    repeat whitespace // ignore leading whitespace
 
-{
-    // Opening bracket
-    group<begin> [{(]
-or
-    // Closing bracket
-    group<end> [)}]
-or
-    // Keyword
-    group<keyword> at-least-1 [a-z0-9\\-]
-or
-    // Literal string 
-    group<literal> {
-        ["]
-        lazy-repeat ("\\" any or any)
-        ["]
-    }
-or
-    // Identifier (group name, flags)
     {
-        "<"
-        group<identifier> lazy-repeat(any)
-        ">"
+        // Opening bracket
+        group<begin> [{(]
+    or
+        // Closing bracket
+        group<end> [)}]
+    or
+        // Keyword
+        group<keyword> at-least-1 [a-z0-9\\-]
+    or
+        // Literal string 
+        group<literal> {
+            ["]
+            lazy-repeat ("\\" any or any)
+            ["]
+        or
+            [']
+            lazy-repeat ("\\" any or any)
+            [']
+        }
+    or
+        // Identifier (group name, flags)
+        {
+            "<"
+            group<identifier> lazy-repeat(any)
+            ">"
+        }
+    or
+        // Character class
+        {
+            "["
+            optional group<complement> "^"
+            group<characterClass> lazy-repeat ("\\" any or any)
+            "]"
+        }
+    or
+        // Magic string for filling it with content
+        {
+            group<prefix> ("\`" at-least-1([A-Z]))
+            group<index> at-least-1([0-9])
+            "}"
+        }
+    or
+        // Multiline comment
+        group<comment1> {
+            "/*" lazy-repeat any "*" "/"
+        }
+    or
+        // Singleline comment
+        group<comment2> {
+            "//" lazy-repeat any end-of-line
+        }
     }
-or
-    // Character class
-    {
-        "["
-        optional group<complement> "^"
-        group<characterClass> lazy-repeat ("\\" any or any)
-        "]"
+
+    repeat whitespace // ignore trailing whitespace
+    */ /\s*(?:(?<begin>[{(])|(?<end>[})])|(?<keyword>[a-z0-9\\-]+)|(?<literal>"(?:\\[\s\S]|[\s\S])*?")|(?:<(?<identifier>[\s\S]*?)>)|(?:\[(?<complement>\^)?(?<characterClass>(?:\\[\s\S]|[\s\S])*?)\])|(?:(?<prefix>`[A-Z]+)(?<index>[0-9]+)\})|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?(?:\n|$)))\s*/isy;
+
+
+function randPrefix(length: number): string {
+    let result = '`';
+    for (let i = 0; i < length; i++) {
+        result += String.fromCharCode(65 + Math.floor(Math.random() * 26));
     }
-or
-    // Magic string for filling it with content
-    {
-        group<prefix> ("\`" at-least-1([A-Z]))
-        group<index> at-least-1([0-9])
-        "}"
-    }
-or
-    // Multiline comment
-    group<comment1> {
-        "/*" lazy-repeat any "*/"
-    }
-or
-    // Singleline comment
-    group<comment2> {
-        "//" lazy-repeat any end-of-line
-    }
+    return result;
 }
 
-repeat whitespace // ignore trailing whitespace
-`;
-
-interface PositionTable {
-    start: number;
-    end: number;
-    offset: number;
+export function randPrefixForText(text: readonly string[]): string {
+    let prefix = randPrefix(3);
+    while (text.some(x => x.indexOf(prefix) >= 0)) {
+        prefix = randPrefix(prefix.length + 1);
+    }
+    return prefix;
 }
 
-export function tokenize(text: string, prefix: string, values: string[]): Token[] {
+export function tokenize(text: string, prefix: string, values: (string | Token[])[]): Token[] {
     let result: Token[] = [];
-    tokenRegex.lastIndex = 0;
+    let tokenRegex = new RegExp(tokenRegexBase);
     let groups: TokenRegexGroups | undefined;
     let position = 0;
     let prefixReplace: RegExp | undefined = undefined;
-    let posTable: PositionTable[] = [{
-        start: 0,
-        end: text.length,
-        offset: 0,
-    }];
+    let userOffset = 0;
     while ((groups = tokenRegex.exec(text)?.groups)) {
+        let userPosition = position + userOffset;
         if (groups.begin !== undefined) {
-            result.push({ position, type: TokenType.Begin });
+            result.push({ position: [userPosition], type: TokenType.Begin });
         } else if (groups.end !== undefined) {
-            result.push({ position, type: TokenType.End });
+            result.push({ position: [userPosition], type: TokenType.End });
         } else if (groups.keyword !== undefined) {
-            result.push({ position, type: TokenType.Keyword, text: groups.keyword.toLowerCase() });
+            result.push({ position: [userPosition], type: TokenType.Keyword, text: groups.keyword.toLowerCase() });
         } else if (groups.literal !== undefined) {
             try {
                 let content = groups.literal;
@@ -135,17 +144,21 @@ export function tokenize(text: string, prefix: string, values: string[]): Token[
                         prefixReplace = new RegExp(prefix + '([0-9]+)\\}', 'g');
                     }
                     content = content.replace(prefixReplace, (_, index) => {
-                        let result = JSON.stringify(values[parseInt(index)]);
+                        let value = values[parseInt(index)];
+                        if (typeof value !== 'string') {
+                            throw new Error('Cannot insert regexp to string literal.');
+                        }
+                        let result = JSON.stringify(value);
                         result = result.substring(1, result.length - 1);
                         return result;
                     });
                 }
-                result.push({ position, type: TokenType.Literal, text: (new Function(`return ${content};`))() });
+                result.push({ position: [userPosition], type: TokenType.Literal, text: (new Function(`return ${content};`))() });
             } catch (ex) {
                 throw new Error(); // TODO: errors
             }
         } else if (groups.identifier !== undefined) {
-            result.push({ position, type: TokenType.Identifier, text: groups.identifier });
+            result.push({ position: [userPosition], type: TokenType.Identifier, text: groups.identifier });
         } else if (groups.characterClass !== undefined) {
             let content = groups.characterClass;
             if (content.indexOf(prefix) >= 0) {
@@ -153,13 +166,27 @@ export function tokenize(text: string, prefix: string, values: string[]): Token[
                     prefixReplace = new RegExp(prefix + '([0-9]+)\\}', 'g');
                 }
                 content = content.replace(prefixReplace, (_, index) => {
-                    return values[parseInt(index)].replace(/[\-\]\\^]/g, '\\$&');
+                    let value = values[parseInt(index)];
+                    if (typeof value !== 'string') {
+                        throw new Error('Cannot insert regexp to character class.');
+                    }
+                    return value.replace(/[\-\]\\^]/g, '\\$&');
                 });
             }
-            result.push({ position, type: TokenType.CharacterClass, text: content, complement: !!groups.complement });
+            result.push({ position: [userPosition], type: TokenType.CharacterClass, text: content, complement: !!groups.complement });
         } else if (groups.prefix === prefix) {
-            text = text.replace(`${prefix}${groups.index}}`, values[parseInt(groups.index as string)]);
-            tokenRegex.lastIndex = result.pop()?.position || 0;
+            let value = values[parseInt(groups.index as string)];
+            let innerTokens: Token[];
+            if (typeof value === 'string') {
+                innerTokens = tokenize(value, randPrefixForText([value]), []);
+            } else {
+                innerTokens = value;
+            }
+            result.push({ position: [userPosition], type: TokenType.Keyword, text: '__sub__' });
+            for (let innerToken of innerTokens) {
+                result.push({ ...innerToken, position: [userPosition, ...innerToken.position] });
+            }
+            userOffset -= `${prefix}${groups.index}}`.length;
         } else if (groups.comment1 !== undefined || groups.comment2 !== undefined) {
             // skip comments
         } else {
