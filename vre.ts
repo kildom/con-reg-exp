@@ -1,4 +1,196 @@
-import { TextToken, Token, TokenType, randPrefixForText, tokenize } from "./tokenizer";
+
+// #region Utilities
+
+
+function randPrefix(length: number): string {
+    let result = '`';
+    for (let i = 0; i < length; i++) {
+        result += String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    }
+    return result;
+}
+
+
+function randPrefixForText(text: readonly string[]): string {
+    let prefix = randPrefix(3);
+    while (text.some(x => x.indexOf(prefix) >= 0)) {
+        prefix = randPrefix(prefix.length + 1);
+    }
+    return prefix;
+}
+
+
+function escapeRegExp(text: string) {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+
+function escapeCharacterClass(text: string) {
+    return text.replace(/[\\\]^-]/g, '\\$&');
+}
+
+
+// #endregion
+
+
+// #region Exceptions
+
+
+export class VREError extends Error {};
+
+
+// #endregion
+
+
+// #region Tokenizer
+
+
+interface SubInfo {
+    sourceCode: string;
+    interpolationPrefix: string;
+}
+
+interface SubFullInfo extends SubInfo {
+    tokens: Token[];
+}
+
+enum TokenType {
+    Literal,
+    Identifier,
+    Keyword,
+    CharacterClass,
+    Begin,
+    End,
+    SubBegin,
+    SubEnd,
+}
+
+interface TextToken {
+    type: TokenType.Literal | TokenType.Identifier | TokenType.Keyword;
+    position: number;
+    text: string;
+}
+
+interface CharacterClassToken {
+    type: TokenType.CharacterClass;
+    position: number;
+    text: string;
+    complement: boolean;
+}
+
+interface TextLessToken {
+    type: TokenType.Begin | TokenType.End | TokenType.SubEnd;
+    position: number;
+}
+
+interface SubBeginToken {
+    type: TokenType.SubBegin;
+    position: number;
+    info: SubInfo;
+}
+
+type Token = TextToken | CharacterClassToken | TextLessToken | SubBeginToken;
+
+interface TokenRegexGroups {
+    begin?: string;
+    end?: string;
+    keyword?: string;
+    literal?: string;
+    identifier?: string;
+    characterClass?: string;
+    complement?: string;
+    prefix?: string;
+    index?: string;
+    comment1?: string;
+    comment2?: string;
+}
+
+const tokenRegexBase = /\s*(?:(?<begin>[{(])|(?<end>[})])|(?<keyword>[a-z0-9\\-]+)|(?<literal>"(?:\\[\s\S]|[\s\S])*?")|(?:<(?<identifier>[\s\S]*?)>)|(?:\[(?<complement>\^)?(?<characterClass>(?:\\[\s\S]|[\s\S])*?)\])|(?:(?<prefix>`[A-Z]+)(?<index>[0-9]+)\})|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?(?:\n|$)))\s*/isy;
+
+function tokenize(text: string, prefix: string, values: (string | SubFullInfo)[]): Token[] {
+    let result: Token[] = [];
+    let tokenRegex = new RegExp(tokenRegexBase);
+    let groups: TokenRegexGroups | undefined;
+    let position = 0;
+    let prefixReplace: RegExp | undefined = undefined;
+    while ((groups = tokenRegex.exec(text)?.groups)) {
+        if (groups.begin !== undefined) {
+            result.push({ position, type: TokenType.Begin });
+        } else if (groups.end !== undefined) {
+            result.push({ position, type: TokenType.End });
+        } else if (groups.keyword !== undefined) {
+            result.push({ position, type: TokenType.Keyword, text: groups.keyword.toLowerCase() });
+        } else if (groups.literal !== undefined) {
+            try {
+                let content = groups.literal;
+                if (content.indexOf(prefix) >= 0) {
+                    if (prefixReplace === undefined) {
+                        prefixReplace = new RegExp(prefix + '([0-9]+)\\}', 'g');
+                    }
+                    content = content.replace(prefixReplace, (_, index) => {
+                        let value = values[parseInt(index)];
+                        if (typeof value !== 'string') {
+                            throw new Error('Cannot insert regexp to string literal.');
+                        }
+                        let result = JSON.stringify(value);
+                        result = result.substring(1, result.length - 1);
+                        return result;
+                    });
+                }
+                result.push({ position, type: TokenType.Literal, text: (new Function(`return ${content};`))() });
+            } catch (ex) {
+                throw new Error(); // TODO: errors
+            }
+        } else if (groups.identifier !== undefined) {
+            result.push({ position, type: TokenType.Identifier, text: groups.identifier });
+        } else if (groups.characterClass !== undefined) {
+            let content = groups.characterClass;
+            if (content.indexOf(prefix) >= 0) {
+                if (prefixReplace === undefined) {
+                    prefixReplace = new RegExp(prefix + '([0-9]+)\\}', 'g');
+                }
+                content = content.replace(prefixReplace, (_, index) => {
+                    let value = values[parseInt(index)];
+                    if (typeof value !== 'string') {
+                        throw new Error('Cannot insert regexp to character class.');
+                    }
+                    return value.replace(/[\-\]\\^]/g, '\\$&');
+                });
+            }
+            result.push({ position, type: TokenType.CharacterClass, text: content, complement: !!groups.complement });
+        } else if (groups.prefix === prefix) {
+            let value = values[parseInt(groups.index as string)];
+            if (typeof value === 'string') {
+                let interpolationPrefix = randPrefixForText([value]);
+                result.push({ position, type: TokenType.SubBegin, info: { sourceCode: value, interpolationPrefix }, });
+                result = result.concat(tokenize(value, interpolationPrefix, []));
+                result.push({ position, type: TokenType.SubEnd });
+            } else {
+                result.push({ position, type: TokenType.Begin });
+                result.push({ position, type: TokenType.SubBegin, info: value });
+                result = result.concat(value.tokens);
+                result.push({ position, type: TokenType.SubEnd });
+                result.push({ position, type: TokenType.End });
+            }
+        } else if (groups.comment1 !== undefined || groups.comment2 !== undefined) {
+            // skip comments
+        } else {
+            break;
+        }
+        position = tokenRegex.lastIndex;
+    }
+    if (position < text.length) {
+        console.error(`Error at line ${text.substring(0, position).split('\n').length}: Syntax error.`);
+        console.error(`Near: ${text.substring(position).split('\n')[0].substring(0, 70)}`);
+    }
+    return result;
+}
+
+// #endregion
+
+
+// #region Parser Context
+
 
 interface Flags {
     multiline: boolean;
@@ -9,48 +201,176 @@ interface Flags {
     sticky: boolean;
 }
 
-const flagsDefaults: Flags = {
-    multiline: true,
-    indices: false,
-    global: true,
-    ignoreCase: false,
-    unicode: false,
-    sticky: false,
-};
-
-const verboseRegExpTokens = Symbol('verboseRegExpTokens');
-
-function escapeRegExp(text: string) {
-    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function escapeCharacterClass(text: string) {
-    return text.replace(/[\\\]^-]/g, '\\$&');
-}
 
 class Context {
     private index: number;
-    public flags: Flags = { ...flagsDefaults };
+    public flags: Flags;
+    public subStack: SubBeginToken[] = [];
 
     public constructor(
-        private tokens: Token[]
+        public info: SubFullInfo,
     ) {
         this.index = 0;
+        this.flags = this.getFlags();
+        this.processSub();
     }
 
     public read(): Token | undefined {
-        return this.tokens[this.index++];
+        let result = this.info.tokens[this.index++];
+        this.processSub();
+        return result;
     }
 
     public peek(): Token | undefined {
-        return this.tokens[this.index];
+        return this.info.tokens[this.index];
     }
+
+    public error(token: Token | undefined, message: string): Error {
+        let stack: SubBeginToken[] = [{
+            type: TokenType.SubBegin,
+            position: 0,
+            info: this.info,
+        }];
+        for (let iterToken of this.info.tokens) {
+            if (iterToken.type === TokenType.SubEnd) {
+                stack.pop();
+            }
+            if (token === iterToken) {
+                break;
+            }
+            if (iterToken.type === TokenType.SubBegin) {
+                stack.push(iterToken);
+            }
+        }
+        if (stack.length === 0) {
+            return new VREError(message);
+        }
+        let position = token?.position;
+        if (position === undefined) {
+            position = this.info.sourceCode.length;
+            stack.splice(1);
+        }
+        let longMessage = '';
+        while (stack.length > 0) {
+            let sub = stack.pop() as SubBeginToken;
+            longMessage += this.formatError(sub.info, position, message);
+            position = sub.position;
+            message = 'Interpolated from:';
+        }
+        return new VREError(longMessage.trimEnd());
+    }
+
+    formatError(info: SubInfo, position: number, message: string) {
+        let linesBefore = info.sourceCode.substring(0, position).split('\n');
+        let lineBefore = linesBefore.at(-1) as string;
+        let lineAfter = info.sourceCode.substring(position).match(/^.*/)?.[0] || '';
+        let lineNumber = linesBefore.length;
+        let columnNumber = lineBefore.length + 1;
+        lineBefore = this.prettifySource(lineBefore, info);
+        lineAfter = this.prettifySource(lineAfter, info);
+        if (lineBefore.length > 50) {
+            lineBefore = lineBefore.substring(lineBefore.length - 50);
+        }
+        if (lineAfter.length > 74) {
+            lineAfter = lineBefore.substring(0, 74);
+        }
+        while (lineBefore.length + lineAfter.length > 74) {
+            if (lineBefore.length > lineAfter.length) {
+                lineBefore = lineBefore.substring(1);
+            } else {
+                lineAfter = lineBefore.substring(0, lineAfter.length - 1);
+            }
+        }
+        lineBefore = lineBefore.trimStart();
+        lineAfter = lineAfter.trimEnd();
+        message += `\n    ${lineBefore}${lineAfter}\n`;
+        message += `    ${' '.repeat(lineBefore.length)}^- line ${lineNumber}, column ${columnNumber}\n`;
+        return message;
+    }
+
+    prettifySource(text: string, info: SubInfo): string {
+        let regexp = new RegExp(`${info.interpolationPrefix}[0-9]+}`, 'g');
+        return text
+            .replace(regexp, m => `\${${'.'.repeat(m.length - 3)}}`)
+            .replace(/[\0- ]/, ' ');
+    }
+
+    public internalError(token: Token): Error {
+        return this.error(token, 'Internal Error.');
+    }
+
+    private processSub() {
+        do {
+            let token: Token | undefined = this.info.tokens[this.index];
+            if (token?.type === TokenType.SubBegin) {
+                this.index++;
+                this.subStack.push(token);
+                let subFlags = this.getFlags();
+                if (this.flags.ignoreCase !== subFlags.ignoreCase) {
+                    throw this.error(token, `Mismatching "ignore-case" flag in sub-expression. Other expression: "${this.flags.ignoreCase ? 'set' : 'cleared'}", sub-expression: "${subFlags.ignoreCase ? 'set' : 'cleared'}".`);
+                } else if (this.flags.unicode !== subFlags.unicode) {
+                    throw this.error(token, `Mismatching "unicode" flag in sub-expression. Other expression: "${this.flags.unicode ? 'set' : 'cleared'}", sub-expression: "${subFlags.unicode ? 'set' : 'cleared'}".`);
+                }
+            } else if (token?.type === TokenType.SubEnd) {
+                this.index++;
+                this.subStack.pop();
+            } else {
+                break;
+            }
+        } while (true);
+    }
+
+    private getFlags() {
+        let flags = {
+            multiline: true,
+            indices: false,
+            global: true,
+            ignoreCase: false,
+            unicode: false,
+            sticky: false,
+        };
+        while (this.info.tokens[this.index]?.type === TokenType.Identifier) {
+            let flagToken = this.info.tokens[this.index++] as TextToken;
+            let flagItems = flagToken.text.split(/[\s,;]+/);
+            for (let flag of flagItems) {
+                switch (flag.toLowerCase()) {
+                    case '':
+                        // ignore
+                        break;
+                    case 'indices':
+                        flags.indices = true;
+                        break;
+                    case 'first':
+                        flags.global = false;
+                        break;
+                    case 'ignore-case':
+                    case 'case-insensitive':
+                        flags.ignoreCase = true;
+                        break;
+                    case 'unicode':
+                        flags.unicode = true;
+                        break;
+                    case 'sticky':
+                        flags.sticky = true;
+                        break;
+                    default:
+                        throw this.error(flagToken, `Unknown flag "${flag}".`);
+                }
+            }
+        }
+        return flags;
+    }
+
 }
 
+
+// #endregion
+
+
+// #region Syntax Tree Nodes
+
+
 abstract class Expression {
-    public constructor(
-        public position: number[]
-    ) { }
     public generateAtom(): string {
         return `(?:${this.generate()})`;
     }
@@ -59,15 +379,13 @@ abstract class Expression {
     }
 }
 
+
 class List extends Expression {
     public items: Expression[];
 
-    public constructor(items: number[] | Expression[]) {
-        super(items[0] instanceof Expression ? items[0].position : items as number[]);
-        this.items = items[0] instanceof Expression ? items as Expression[] : [];
-        if (this.items.length === 1) {
-            throw new Error(`Internal error at: ${this.position}`);
-        }
+    public constructor(ctx: Context, items?: Expression[]) {
+        super();
+        this.items = items || [];
     }
 
     public generate(): string {
@@ -85,10 +403,7 @@ class OrExpression extends Expression {
     public constructor(
         public items: Expression[]
     ) {
-        super(items[0].position);
-        if (this.items.length <= 1) {
-            throw new Error(`Internal error at: ${this.position}`);
-        }
+        super();
     }
     public generate(): string {
         return this.items.map(item => item.generate()).join('|');
@@ -96,8 +411,8 @@ class OrExpression extends Expression {
 }
 
 class InvertibleExpression extends Expression {
-    public constructor(position: number[], public negative: boolean) {
-        super(position);
+    public constructor(public negative: boolean) {
+        super();
     }
 }
 
@@ -121,10 +436,10 @@ class CharacterClassEscape extends InvertibleExpression {
     static create(token: Token) {
         let obj: CharacterClassEscape | undefined = undefined;
         if (token.type === TokenType.CharacterClass && this.complementaryValue[token.text]) {
-            obj = new CharacterClassEscape(token.position, token.complement);
+            obj = new CharacterClassEscape(token.complement);
             obj.escapedText = token.text;
         } else if (token.type === TokenType.Keyword && this.keywords[token.text]) {
-            obj = new CharacterClassEscape(token.position, false);
+            obj = new CharacterClassEscape(false);
             obj.escapedText = this.keywords[token.text];
         }
         return obj;
@@ -151,13 +466,13 @@ class CharacterClassSingle extends InvertibleExpression {
     static create(token: Token) {
         let obj: CharacterClassSingle | undefined = undefined;
         if (token.type === TokenType.Literal && token.text.length === 1) { // TODO: Support unicode surrogate pairs
-            obj = new CharacterClassSingle(token.position, false);
+            obj = new CharacterClassSingle(false);
             obj.unescapedText = token.text;
         } else if (token.type === TokenType.Keyword && this.keywords[token.text]) {
-            obj = new CharacterClassSingle(token.position, false);
+            obj = new CharacterClassSingle(false);
             obj.unescapedText = this.keywords[token.text];
         } else if (token.type === TokenType.CharacterClass && token.text.length === 1) {
-            obj = new CharacterClassSingle(token.position, token.complement);
+            obj = new CharacterClassSingle(token.complement);
             obj.unescapedText = token.text;
         }
         return obj;
@@ -175,7 +490,7 @@ class CharacterClassAny extends Expression {
     static create(token: Token) {
         let obj: CharacterClassAny | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'any') {
-            obj = new CharacterClassAny(token.position);
+            obj = new CharacterClassAny();
         }
         return obj;
     }
@@ -193,10 +508,10 @@ class CharacterClassRange extends InvertibleExpression {
     static create(token: Token) {
         let obj: CharacterClassRange | undefined = undefined;
         if (token.type === TokenType.CharacterClass) {
-            obj = new CharacterClassRange(token.position, token.complement);
+            obj = new CharacterClassRange(token.complement);
             obj.escapedText = token.text;
         } else if (token.type === TokenType.Keyword && this.keywords[token.text]) {
-            obj = new CharacterClassRange(token.position, false);
+            obj = new CharacterClassRange(false);
             obj.escapedText = this.keywords[token.text];
         }
         return obj;
@@ -211,7 +526,7 @@ class Literal extends Expression {
     static create(token: Token) {
         let obj: Literal | undefined = undefined;
         if (token.type === TokenType.Literal) {
-            obj = new Literal(token.position);
+            obj = new Literal();
             obj.unescapedText = token.text;
         }
         return obj;
@@ -226,10 +541,10 @@ class Backreference extends Expression {
     static create(token: Token, ctx: Context) {
         let obj: Backreference | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'match') {
-            obj = new Backreference(token.position);
+            obj = new Backreference();
             let id = ctx.read();
             if (id?.type !== TokenType.Identifier) {
-                throw new Error('Expecting identifier after "match" at: ' + token.position);
+                throw ctx.error(id || token, 'Expecting identifier after "match".');
             }
             if (id.text.trim().match(/[1-9][0-9]*/)) {
                 obj.text = `\\${id.text.trim()}`;
@@ -248,7 +563,7 @@ class WordBoundary extends InvertibleExpression {
     static create(token: Token) {
         let obj: WordBoundary | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'word-boundary' || token.text === 'word-bound')) {
-            obj = new WordBoundary(token.position, false);
+            obj = new WordBoundary(false);
         }
         return obj;
     }
@@ -265,7 +580,7 @@ class LineBoundary extends InvertibleExpression {
         if (token.type === TokenType.Keyword && (token.text === 'begin-of-line'
             || token.text === 'start-of-line' || token.text === 'end-of-line')
         ) {
-            obj = new LineBoundary(token.position, false);
+            obj = new LineBoundary(false);
             obj.start = (token.text !== 'end-of-line');
             obj.flags = ctx.flags;
         }
@@ -292,7 +607,7 @@ class TextBoundary extends InvertibleExpression {
         if (token.type === TokenType.Keyword && (token.text === 'begin-of-text'
             || token.text === 'start-of-text' || token.text === 'end-of-text')
         ) {
-            obj = new TextBoundary(token.position, false);
+            obj = new TextBoundary(false);
             obj.start = (token.text !== 'end-of-text');
             ctx.flags.multiline = false;
         }
@@ -311,7 +626,7 @@ class Group extends Expression {
     static create(token: Token, ctx: Context) {
         let obj: Group | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'group') {
-            obj = new Group(token.position);
+            obj = new Group();
             let idToken = ctx.peek() as TextToken | undefined;
             if (idToken?.type !== TokenType.Identifier) {
                 obj.id = undefined;
@@ -340,7 +655,7 @@ class LookGroup extends Expression {
         let obj: LookGroup | undefined = undefined;
         let m: RegExpMatchArray | null;
         if (token.type === TokenType.Keyword && (m = token.text.match(/^look-?(ahead|behind)$/))) {
-            obj = new LookGroup(token.position);
+            obj = new LookGroup();
             obj.ahead = m[1] === 'ahead';
             obj.negative = false;
             let notToken = ctx.peek();
@@ -367,7 +682,7 @@ class Quantifier extends Expression {
         let obj: Quantifier | undefined = undefined;
         let m: RegExpMatchArray | null;
         if (token.type === TokenType.Keyword && (m = token.text.match(Quantifier.match))) {
-            obj = new Quantifier(token.position);
+            obj = new Quantifier();
             obj.lazy = !!m.groups?.lazy;
             if (m.groups?.optional) {
                 obj.min = 0;
@@ -384,7 +699,7 @@ class Quantifier extends Expression {
                 }
             } else {
                 if (m.groups?.from === undefined || m.groups?.to !== undefined) {
-                    throw Error(`Exactly one number allowed at: ${token.position}`);
+                    throw ctx.error(token, 'Exactly one number expected.');
                 }
                 if (m.groups?.type === 'most') {
                     obj.max = parseInt(m.groups?.from);
@@ -420,6 +735,16 @@ class Quantifier extends Expression {
     }
 }
 
+
+// #endregion
+
+
+// #region Parser
+
+
+const verboseRegExpInfo = Symbol('verboseRegExpInfo');
+
+
 function parseOr(ctx: Context): Expression {
     let a = parseList(ctx);
     let next = ctx.peek();
@@ -443,6 +768,7 @@ function parseOr(ctx: Context): Expression {
     }
 }
 
+
 function parseList(ctx: Context): Expression {
     let items: Expression[] = [];
     do {
@@ -454,13 +780,14 @@ function parseList(ctx: Context): Expression {
         }
     } while (true);
     if (items.length === 0) {
-        return new List(ctx.peek()?.position || [0]);
+        return new List(ctx);
     } else if (items.length === 1) {
         return items[0];
     } else {
-        return new List(items);
+        return new List(ctx, items);
     }
 }
+
 
 function parseLeaf(ctx: Context): Expression {
     let token = ctx.read();
@@ -469,15 +796,19 @@ function parseLeaf(ctx: Context): Expression {
             let a = parseOr(ctx);
             let end = ctx.read();
             if (end?.type !== TokenType.End) {
-                throw new Error('Unterminated bracket at: ' + token.position);
+                throw ctx.error(token, 'Unterminated bracket.');
             }
             return a;
         }
         case undefined:
-            throw new Error('Unexpected end of string.');
+            throw ctx.error(undefined, 'Unexpected end of expression.');
         case TokenType.End:
+            throw ctx.error(token, 'Unexpected closing bracket.');
         case TokenType.Identifier:
-            throw new Error('Unexpected token at: ' + (token?.position || 0));
+            throw ctx.error(token, `Unexpected identifier "<${token.text}>".`);
+        case TokenType.SubBegin:
+        case TokenType.SubEnd:
+            throw ctx.error(token, 'Unexpected token.');
         case TokenType.CharacterClass:
         case TokenType.Keyword:
         case TokenType.Literal:
@@ -491,16 +822,8 @@ function parseLeaf(ctx: Context): Expression {
         if (exp instanceof InvertibleExpression) {
             exp.negative = !exp.negative;
         } else {
-            throw new Error(`The "not" keyword is not allowed before this expression at: ${token.position}`);
+            throw ctx.error(token, 'The "not" keyword is not allowed before this expression.');
         }
-    } else if (token.type === TokenType.Keyword && token.text === '__sub__') {
-        let subFlags = getFlags(ctx);
-        if (ctx.flags.ignoreCase !== subFlags.ignoreCase) {
-            throw new Error('Mismatching "ignore-case" flag in sub-expression.');
-        } else if (ctx.flags.unicode !== subFlags.unicode) {
-            throw new Error('Mismatching "unicode" flag in sub-expression.');
-        }
-        exp = parseLeaf(ctx);
     } else {
         exp = CharacterClassEscape.create(token)
             || CharacterClassSingle.create(token)
@@ -518,51 +841,22 @@ function parseLeaf(ctx: Context): Expression {
     }
 
     if (!exp) {
-        throw new Error(`Unknown keyword "${token.text}" at: ${token.position}`);
+        throw ctx.error(token, `Unknown keyword "${token.text}".`);
     }
     return exp;
 }
 
-function getFlags(ctx: Context) {
-    let flags = { ...flagsDefaults };
-    while (ctx.peek()?.type === TokenType.Identifier) {
-        let flagToken = ctx.read() as TextToken;
-        let flagItems = flagToken.text.split(/[\s,;]+/);
-        for (let flag of flagItems) {
-            switch (flag.toLowerCase()) {
-                case '':
-                    // ignore
-                    break;
-                case 'indices':
-                    flags.indices = true;
-                    break;
-                case 'first':
-                    flags.global = false;
-                    break;
-                case 'ignore-case':
-                case 'case-insensitive':
-                    flags.ignoreCase = true;
-                    break;
-                case 'unicode':
-                    flags.unicode = true;
-                    break;
-                case 'sticky':
-                    flags.sticky = true;
-                    break;
-                default:
-                    throw new Error(`Unknown flag "${flag}" at: ${flagToken.position}`);
-            }
-        }
-    }
-    return flags;
-}
 
-export function parse(text: string, prefix: string, values: (string | Token[])[]): RegExp {
+export function parse(text: string, prefix: string, values: (string | SubFullInfo)[]): RegExp {
 
     let tokens = tokenize(text, prefix, values);
     //console.log(tokens); return new RegExp('');
-    let ctx = new Context(tokens);
-    ctx.flags = getFlags(ctx);
+    let subInfo: SubFullInfo = {
+        interpolationPrefix: prefix,
+        sourceCode: text,
+        tokens: tokens,
+    };
+    let ctx = new Context(subInfo);
 
     let expr = parseOr(ctx);
     let pattern = expr.generate();
@@ -576,42 +870,53 @@ export function parse(text: string, prefix: string, values: (string | Token[])[]
     if (ctx.flags.sticky) flags += 'y';
 
     let result = new RegExp(pattern, flags);
-    Object.defineProperty(result, verboseRegExpTokens, {
+    Object.defineProperty(result, verboseRegExpInfo, {
         configurable: false,
         enumerable: false,
-        value: tokens,
+        value: subInfo,
         writable: false,
     });
     return result;
 }
 
-//const inputString = Symbol('verboseRegExpInputString');
 
-export function verboseRegExp(str: TemplateStringsArray, ...values: any[]) {
-    let raw = str.raw;
-    let prefix = randPrefixForText(raw);
-    let input = raw[0];
-    let valuesProcessed: (string | Token[])[] = [];
-    for (let i = 0; i < values.length; i++) {
-        let value = values[i];
-        input += prefix + i + '}' + raw[i + 1];
-        if (value instanceof RegExp && value[verboseRegExpTokens]) {
-            valuesProcessed.push(value[verboseRegExpTokens] as Token[]);
-        } else {
-            valuesProcessed.push(`${values[i]}`);
-        }
-    }
-    return parse(input, prefix, valuesProcessed);
-}
+// #endregion
+
+
+// #region Interface
+
 
 export function vre(str: TemplateStringsArray, ...values: any[]) {
-    return verboseRegExp(str, ...values);
+    try {
+        let raw = str.raw;
+        let prefix = randPrefixForText(raw);
+        let input = raw[0];
+        let valuesProcessed: (string | SubFullInfo)[] = [];
+        for (let i = 0; i < values.length; i++) {
+            let value = values[i];
+            input += prefix + i + '}' + raw[i + 1];
+            if (value instanceof RegExp && value[verboseRegExpInfo]) {
+                valuesProcessed.push(value[verboseRegExpInfo] as SubFullInfo);
+            } else {
+                valuesProcessed.push(`${values[i]}`);
+            }
+        }
+        return parse(input, prefix, valuesProcessed);
+    } catch (err) {
+        if (err instanceof VREError) {
+            throw new VREError(err.message);
+        }
+        throw err;
+    }
 }
+
+// #endregion
+
 
 let a = "Thi\"\\`\`s$ is [test]";
 let b = "not [x-y]";
 
-/*console.log(verboseRegExp`
+console.log(vre`
 <FIRST, IGNORE-CASE, STICKY>
 
 repeat whitespace // ignore leading whitespace
@@ -667,10 +972,14 @@ or
 }
 
 repeat whitespace // ignore trailing whitespace
-`);*/
+`);
 
 let ic = '<IGNORE-CASE> any';
 
-let sub = vre`<IGNORE-CASE> "a" "b" "c" ${ic}`;
+let sub = vre`<IGNORE-CASE> "a"
+ "b" 
+ "c" ${ic}`;
 
-console.log(vre`<IGNORE-CASE> "x" "y" ${sub} "z" "w"`);
+console.log(vre`<IGNORE-CASE> "x" 
+"y" ${sub}
+ "z" "w"`);
