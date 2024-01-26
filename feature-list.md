@@ -3,23 +3,23 @@
 Done | Feature |  Description
 -----|---------|------
 ...| **Regex flags** |
-.  | d | `indices` Generate indices for substring matches.
-.  | g | `global` Global search.
-.  | i | `ignore-case` Case-insensitive search.
+OK | d | `indices` Generate indices for substring matches.
+OK | g | `global` Global search.
+OK | i | `ignore-case` Case-insensitive search.
 OK | m | automatic;  Allows ^ and $ to match next to newline characters.
-OK | s | always disabled Allows . to match newline characters.	dotAll
+OK | s | always enabled Allows . to match newline characters.
 .  | u | `unicode` Treat a pattern as a sequence of Unicode code points
 ns | v | Not supported for now. An upgrade to the u mode with more Unicode features.
-.  | y | `sticky` Perform a "sticky" search that matches starting at the current position in the target string.
+OK | y | `sticky` Perform a "sticky" search that matches starting at the current position in the target string.
 ...| **Assertions**
 OK | `^$` | start-of-text, start-of-line, ...
 OK | `(?=...) (?!...) (?<=...) (?<!...)` | look-ahead, look-ahead not, ...
-?  | `\b\B` | word-boundary, not word-boundary, TODO: not operator
+OK | `\b\B` | word-boundary, not word-boundary, TODO: not operator
 ...| **Atoms**
 OK | `\1, \2` | `match<N>` Backreference
 OK | `( )` | group ...
-?  | `[ ] [^ ]` | `[ ] [^ ]` Character class (TODO: some improvements, or operator)
-.  | `\d, \D, \w, \W, \s, \S` | digit, not digit, word-char, ... Character class escape (TODO: rename to word => word-char)
+OK | `[ ] [^ ]` | `[ ] [^ ]` Character class
+OK | `\d, \D, \w, \W, \s, \S` | digit, not digit, word-char, ... Character class escape (TODO: rename to word => word-char)
 OK | `\r\n\t\0` | `\r\n\t\0` or `tab`, e.t.c... Character escape
 OK | `\u...\x...`  | `"\u...\x..."` Unicode or byte escape
 OK | `abc` | `"abc"` Literal character
@@ -27,7 +27,7 @@ OK | `\k<name>` | `match<name>` Named backreference
 OK | `(?<name>...)` | `group<name> ...` Named capturing group
 OK | `(?:...)` | Added automatically when needed
 .  | `\p{...}, \P{...}` | `property<...>` Unicode character class escape
-.  | `.` | `any` or `not term` Wildcard
+OK | `.` | `any` or `not term` Wildcard
 ...| **Other features**
 OK | `\|` | `or`
 OK | `* + ? {n} {n,} {n,m}` | `optional`, `repeat-N`, `at-least-N`, ...

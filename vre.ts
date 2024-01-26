@@ -562,6 +562,30 @@ class CharacterClassRange extends InvertibleNode {
 }
 
 
+class CharacterClassProperty extends InvertibleNode {
+
+    private property!: string;
+
+    public static create(token: Token, ctx: Context) {
+        let obj: CharacterClassProperty | undefined = undefined;
+        let m: RegExpMatchArray | null;
+        if (token.type === TokenType.Keyword && (token.text === 'prop' || token.text === 'property')) {
+            obj = new CharacterClassProperty(false);
+            let id = ctx.read();
+            if (id?.type !== TokenType.Identifier) {
+                throw ctx.error(id || token, 'Expecting identifier after "property".');
+            }
+            obj.property = id.text;
+        }
+        return obj;
+    }
+
+    public generateAtom(): string {
+        return `\\${this.negative ? 'P' : 'p'}{${this.property}}`;
+    }
+}
+
+
 class Literal extends Node {
 
     private unescapedText!: string;
@@ -710,19 +734,17 @@ class Group extends Node {
 }
 
 
-class LookGroup extends Node {
+class LookGroup extends InvertibleNode {
 
     private ahead!: boolean;
-    private negative!: boolean;
     private child!: Node;
 
     public static create(token: Token, ctx: Context) {
         let obj: LookGroup | undefined = undefined;
         let m: RegExpMatchArray | null;
         if (token.type === TokenType.Keyword && (m = token.text.match(/^look-?(ahead|behind)$/))) {
-            obj = new LookGroup();
+            obj = new LookGroup(false);
             obj.ahead = m[1] === 'ahead';
-            obj.negative = false;
             let notToken = ctx.peek();
             if (notToken?.type === TokenType.Keyword && notToken.text === 'not') {
                 ctx.read();
@@ -901,6 +923,7 @@ function parseLeaf(ctx: Context): Node {
             || CharacterClassSingle.create(token)
             || CharacterClassAny.create(token)
             || CharacterClassRange.create(token)
+            || CharacterClassProperty.create(token, ctx)
             || Literal.create(token)
             || Backreference.create(token, ctx)
             || WordBoundary.create(token)
