@@ -2,5 +2,6 @@
     "cSpell.words": [
         "Backreference",
         "endregion"
-    ]
+    ],
+    "editor.rulers": [ 120 ],
 }

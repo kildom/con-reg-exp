@@ -36,7 +36,14 @@ function escapeCharacterClass(text: string) {
 // #region Exceptions
 
 
-export class VREError extends Error {};
+export class VREError extends Error { };
+
+
+class TokenizerError extends Error {
+    constructor(public position: number, message: string) {
+        super(message);
+    }
+}
 
 
 // #endregion
@@ -45,12 +52,12 @@ export class VREError extends Error {};
 // #region Tokenizer
 
 
-interface SubInfo {
+interface ExpressionSource {
     sourceCode: string;
     interpolationPrefix: string;
 }
 
-interface SubFullInfo extends SubInfo {
+interface ExpressionTokenized extends ExpressionSource {
     tokens: Token[];
 }
 
@@ -61,8 +68,8 @@ enum TokenType {
     CharacterClass,
     Begin,
     End,
-    SubBegin,
-    SubEnd,
+    InterpolationBegin,
+    InterpolationEnd,
 }
 
 interface TextToken {
@@ -78,18 +85,18 @@ interface CharacterClassToken {
     complement: boolean;
 }
 
-interface TextLessToken {
-    type: TokenType.Begin | TokenType.End | TokenType.SubEnd;
+interface EmptyToken {
+    type: TokenType.Begin | TokenType.End | TokenType.InterpolationEnd;
     position: number;
 }
 
-interface SubBeginToken {
-    type: TokenType.SubBegin;
+interface InterpolationBeginToken {
+    type: TokenType.InterpolationBegin;
     position: number;
-    info: SubInfo;
+    source: ExpressionSource;
 }
 
-type Token = TextToken | CharacterClassToken | TextLessToken | SubBeginToken;
+type Token = TextToken | CharacterClassToken | EmptyToken | InterpolationBeginToken;
 
 interface TokenRegexGroups {
     begin?: string;
@@ -105,9 +112,11 @@ interface TokenRegexGroups {
     comment2?: string;
 }
 
+
 const tokenRegexBase = /\s*(?:(?<begin>[{(])|(?<end>[})])|(?<keyword>[a-z0-9\\-]+)|(?<literal>"(?:\\[\s\S]|[\s\S])*?")|(?:<(?<identifier>[\s\S]*?)>)|(?:\[(?<complement>\^)?(?<characterClass>(?:\\[\s\S]|[\s\S])*?)\])|(?:(?<prefix>`[A-Z]+)(?<index>[0-9]+)\})|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?(?:\n|$)))\s*/isy;
 
-function tokenize(text: string, prefix: string, values: (string | SubFullInfo)[]): Token[] {
+
+function tokenize(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): Token[] {
     let result: Token[] = [];
     let tokenRegex = new RegExp(tokenRegexBase);
     let groups: TokenRegexGroups | undefined;
@@ -121,55 +130,59 @@ function tokenize(text: string, prefix: string, values: (string | SubFullInfo)[]
         } else if (groups.keyword !== undefined) {
             result.push({ position, type: TokenType.Keyword, text: groups.keyword.toLowerCase() });
         } else if (groups.literal !== undefined) {
-            try {
-                let content = groups.literal;
-                if (content.indexOf(prefix) >= 0) {
-                    if (prefixReplace === undefined) {
-                        prefixReplace = new RegExp(prefix + '([0-9]+)\\}', 'g');
-                    }
-                    content = content.replace(prefixReplace, (_, index) => {
-                        let value = values[parseInt(index)];
-                        if (typeof value !== 'string') {
-                            throw new Error('Cannot insert regexp to string literal.');
-                        }
-                        let result = JSON.stringify(value);
-                        result = result.substring(1, result.length - 1);
-                        return result;
-                    });
+            let content = groups.literal;
+            if (content.indexOf(interpolationPrefix) >= 0) {
+                if (prefixReplace === undefined) {
+                    prefixReplace = new RegExp(interpolationPrefix + '([0-9]+)\\}', 'g');
                 }
+                content = content.replace(prefixReplace, (_, index) => {
+                    let value = values[parseInt(index)];
+                    if (typeof value !== 'string') {
+                        throw new TokenizerError(position, 'Cannot interpolate expression to a string literal.');
+                    }
+                    let result = JSON.stringify(value);
+                    result = result.substring(1, result.length - 1);
+                    return result;
+                });
+            }
+            try {
                 result.push({ position, type: TokenType.Literal, text: (new Function(`return ${content};`))() });
             } catch (ex) {
-                throw new Error(); // TODO: errors
+                throw new TokenizerError(position, 'Error parsing string literal.');
             }
         } else if (groups.identifier !== undefined) {
             result.push({ position, type: TokenType.Identifier, text: groups.identifier });
         } else if (groups.characterClass !== undefined) {
             let content = groups.characterClass;
-            if (content.indexOf(prefix) >= 0) {
+            if (content.indexOf(interpolationPrefix) >= 0) {
                 if (prefixReplace === undefined) {
-                    prefixReplace = new RegExp(prefix + '([0-9]+)\\}', 'g');
+                    prefixReplace = new RegExp(interpolationPrefix + '([0-9]+)\\}', 'g');
                 }
                 content = content.replace(prefixReplace, (_, index) => {
                     let value = values[parseInt(index)];
                     if (typeof value !== 'string') {
-                        throw new Error('Cannot insert regexp to character class.');
+                        throw new TokenizerError(position, 'Cannot interpolate expression to a character class.');
                     }
-                    return value.replace(/[\-\]\\^]/g, '\\$&');
+                    return escapeCharacterClass(value);
                 });
             }
             result.push({ position, type: TokenType.CharacterClass, text: content, complement: !!groups.complement });
-        } else if (groups.prefix === prefix) {
+        } else if (groups.prefix === interpolationPrefix) {
             let value = values[parseInt(groups.index as string)];
             if (typeof value === 'string') {
-                let interpolationPrefix = randPrefixForText([value]);
-                result.push({ position, type: TokenType.SubBegin, info: { sourceCode: value, interpolationPrefix }, });
-                result = result.concat(tokenize(value, interpolationPrefix, []));
-                result.push({ position, type: TokenType.SubEnd });
+                let innerPrefix = randPrefixForText([value]);
+                result.push({
+                    position,
+                    type: TokenType.InterpolationBegin,
+                    source: { sourceCode: value, interpolationPrefix: innerPrefix },
+                });
+                result = result.concat(tokenize(value, innerPrefix, []));
+                result.push({ position, type: TokenType.InterpolationEnd });
             } else {
                 result.push({ position, type: TokenType.Begin });
-                result.push({ position, type: TokenType.SubBegin, info: value });
+                result.push({ position, type: TokenType.InterpolationBegin, source: value });
                 result = result.concat(value.tokens);
-                result.push({ position, type: TokenType.SubEnd });
+                result.push({ position, type: TokenType.InterpolationEnd });
                 result.push({ position, type: TokenType.End });
             }
         } else if (groups.comment1 !== undefined || groups.comment2 !== undefined) {
@@ -180,8 +193,7 @@ function tokenize(text: string, prefix: string, values: (string | SubFullInfo)[]
         position = tokenRegex.lastIndex;
     }
     if (position < text.length) {
-        console.error(`Error at line ${text.substring(0, position).split('\n').length}: Syntax error.`);
-        console.error(`Near: ${text.substring(position).split('\n')[0].substring(0, 70)}`);
+        throw new TokenizerError(position, 'Syntax error.');
     }
     return result;
 }
@@ -203,21 +215,23 @@ interface Flags {
 
 
 class Context {
-    private index: number;
+
     public flags: Flags;
-    public subStack: SubBeginToken[] = [];
+
+    private index: number;
+    private interpolationStack: InterpolationBeginToken[] = [];
 
     public constructor(
-        public info: SubFullInfo,
+        public info: ExpressionTokenized,
     ) {
         this.index = 0;
         this.flags = this.getFlags();
-        this.processSub();
+        this.processInterpolation();
     }
 
     public read(): Token | undefined {
         let result = this.info.tokens[this.index++];
-        this.processSub();
+        this.processInterpolation();
         return result;
     }
 
@@ -226,19 +240,19 @@ class Context {
     }
 
     public error(token: Token | undefined, message: string): Error {
-        let stack: SubBeginToken[] = [{
-            type: TokenType.SubBegin,
+        let stack: InterpolationBeginToken[] = [{
+            type: TokenType.InterpolationBegin,
             position: 0,
-            info: this.info,
+            source: this.info,
         }];
         for (let iterToken of this.info.tokens) {
-            if (iterToken.type === TokenType.SubEnd) {
+            if (iterToken.type === TokenType.InterpolationEnd) {
                 stack.pop();
             }
             if (token === iterToken) {
                 break;
             }
-            if (iterToken.type === TokenType.SubBegin) {
+            if (iterToken.type === TokenType.InterpolationBegin) {
                 stack.push(iterToken);
             }
         }
@@ -252,15 +266,15 @@ class Context {
         }
         let longMessage = '';
         while (stack.length > 0) {
-            let sub = stack.pop() as SubBeginToken;
-            longMessage += this.formatError(sub.info, position, message);
-            position = sub.position;
+            let beginToken = stack.pop() as InterpolationBeginToken;
+            longMessage += this.formatError(beginToken.source, position, message);
+            position = beginToken.position;
             message = 'Interpolated from:';
         }
         return new VREError(longMessage.trimEnd());
     }
 
-    formatError(info: SubInfo, position: number, message: string) {
+    private formatError(info: ExpressionSource, position: number, message: string) {
         let linesBefore = info.sourceCode.substring(0, position).split('\n');
         let lineBefore = linesBefore.at(-1) as string;
         let lineAfter = info.sourceCode.substring(position).match(/^.*/)?.[0] || '';
@@ -274,7 +288,7 @@ class Context {
         if (lineAfter.length > 74) {
             lineAfter = lineBefore.substring(0, 74);
         }
-        while (lineBefore.length + lineAfter.length > 74) {
+        while (lineBefore.length + lineAfter.length > 74) {
             if (lineBefore.length > lineAfter.length) {
                 lineBefore = lineBefore.substring(1);
             } else {
@@ -288,32 +302,32 @@ class Context {
         return message;
     }
 
-    prettifySource(text: string, info: SubInfo): string {
+    private prettifySource(text: string, info: ExpressionSource): string {
         let regexp = new RegExp(`${info.interpolationPrefix}[0-9]+}`, 'g');
         return text
             .replace(regexp, m => `\${${'.'.repeat(m.length - 3)}}`)
             .replace(/[\0- ]/, ' ');
     }
 
-    public internalError(token: Token): Error {
-        return this.error(token, 'Internal Error.');
-    }
-
-    private processSub() {
+    private processInterpolation() {
         do {
             let token: Token | undefined = this.info.tokens[this.index];
-            if (token?.type === TokenType.SubBegin) {
+            if (token?.type === TokenType.InterpolationBegin) {
                 this.index++;
-                this.subStack.push(token);
-                let subFlags = this.getFlags();
-                if (this.flags.ignoreCase !== subFlags.ignoreCase) {
-                    throw this.error(token, `Mismatching "ignore-case" flag in sub-expression. Other expression: "${this.flags.ignoreCase ? 'set' : 'cleared'}", sub-expression: "${subFlags.ignoreCase ? 'set' : 'cleared'}".`);
-                } else if (this.flags.unicode !== subFlags.unicode) {
-                    throw this.error(token, `Mismatching "unicode" flag in sub-expression. Other expression: "${this.flags.unicode ? 'set' : 'cleared'}", sub-expression: "${subFlags.unicode ? 'set' : 'cleared'}".`);
+                this.interpolationStack.push(token);
+                let innerFlags = this.getFlags();
+                if (this.flags.ignoreCase !== innerFlags.ignoreCase) {
+                    throw this.error(token, `Mismatching "ignore-case" flag in interpolated expression. ` +
+                        `Outer expression: "${this.flags.ignoreCase ? 'set' : 'unset'}", ` +
+                        `interpolated expression: "${innerFlags.ignoreCase ? 'set' : 'unset'}".`);
+                } else if (this.flags.unicode !== innerFlags.unicode) {
+                    throw this.error(token, `Mismatching "unicode" flag in interpolated expression. ` +
+                        `Outer expression: "${this.flags.unicode ? 'set' : 'unset'}", ` +
+                        `interpolated expression: "${innerFlags.unicode ? 'set' : 'unset'}".`);
                 }
-            } else if (token?.type === TokenType.SubEnd) {
+            } else if (token?.type === TokenType.InterpolationEnd) {
                 this.index++;
-                this.subStack.pop();
+                this.interpolationStack.pop();
             } else {
                 break;
             }
@@ -360,7 +374,6 @@ class Context {
         }
         return flags;
     }
-
 }
 
 
@@ -370,20 +383,23 @@ class Context {
 // #region Syntax Tree Nodes
 
 
-abstract class Expression {
+abstract class Node {
+
     public generateAtom(): string {
         return `(?:${this.generate()})`;
     }
+
     public generate(): string {
         return this.generateAtom();
     }
 }
 
 
-class List extends Expression {
-    public items: Expression[];
+class List extends Node {
 
-    public constructor(ctx: Context, items?: Expression[]) {
+    public items: Node[];
+
+    public constructor(items?: Node[]) {
         super();
         this.items = items || [];
     }
@@ -399,26 +415,34 @@ class List extends Expression {
     }
 }
 
-class OrExpression extends Expression {
+
+class OrExpression extends Node {
+
     public constructor(
-        public items: Expression[]
+        public items: Node[]
     ) {
         super();
     }
+
     public generate(): string {
         return this.items.map(item => item.generate()).join('|');
     }
 }
 
-class InvertibleExpression extends Expression {
+
+class InvertibleNode extends Node {
+
     public constructor(public negative: boolean) {
         super();
     }
 }
 
-class CharacterClassEscape extends InvertibleExpression {
-    public escapedText!: string;
-    static complementaryValue: { [key: string]: string } = {
+
+class CharacterClassEscape extends InvertibleNode {
+
+    private escapedText!: string;
+
+    private static complementaryValue: { [key: string]: string } = {
         '\\d': '\\D',
         '\\D': '\\d',
         '\\s': '\\S',
@@ -426,14 +450,16 @@ class CharacterClassEscape extends InvertibleExpression {
         '\\w': '\\W',
         '\\W': '\\w',
     };
-    static keywords: { [keyword: string]: string } = {
+
+    private static keywords: { [keyword: string]: string } = {
         'digit': '\\d',
         'white-space': '\\s',
         'whitespace': '\\s',
         'word-character': '\\w',
         'word-char': '\\w',
     };
-    static create(token: Token) {
+
+    public static create(token: Token) {
         let obj: CharacterClassEscape | undefined = undefined;
         if (token.type === TokenType.CharacterClass && this.complementaryValue[token.text]) {
             obj = new CharacterClassEscape(token.complement);
@@ -444,6 +470,7 @@ class CharacterClassEscape extends InvertibleExpression {
         }
         return obj;
     }
+
     public generateAtom(): string {
         if (this.negative) {
             return CharacterClassEscape.complementaryValue[this.escapedText];
@@ -451,11 +478,14 @@ class CharacterClassEscape extends InvertibleExpression {
             return this.escapedText;
         }
     }
-};
+}
 
-class CharacterClassSingle extends InvertibleExpression {
-    public unescapedText!: string;
-    static keywords: { [keyword: string]: string } = {
+
+class CharacterClassSingle extends InvertibleNode {
+
+    private unescapedText!: string;
+
+    private static keywords: { [keyword: string]: string } = {
         '\\n': '\n', 'nl': '\n', 'new-line': '\n', 'lf': '\n', 'line-feed': '\n',
         '\\r': '\r', 'cr': '\r', 'carriage-return': '\r',
         '\\t': '\t', 'tab': '\t', 'tabulation': '\t',
@@ -463,7 +493,8 @@ class CharacterClassSingle extends InvertibleExpression {
         'sp': ' ', 'space': ' ',
         'nbsp': '\xA0',
     };
-    static create(token: Token) {
+
+    public static create(token: Token) {
         let obj: CharacterClassSingle | undefined = undefined;
         if (token.type === TokenType.Literal && token.text.length === 1) { // TODO: Support unicode surrogate pairs
             obj = new CharacterClassSingle(false);
@@ -477,6 +508,7 @@ class CharacterClassSingle extends InvertibleExpression {
         }
         return obj;
     }
+
     public generateAtom(): string {
         if (this.negative) {
             return `[^${escapeCharacterClass(this.unescapedText)}]`;
@@ -484,28 +516,35 @@ class CharacterClassSingle extends InvertibleExpression {
             return escapeRegExp(this.unescapedText);
         }
     }
-};
+}
 
-class CharacterClassAny extends Expression {
-    static create(token: Token) {
+
+class CharacterClassAny extends Node {
+
+    public static create(token: Token) {
         let obj: CharacterClassAny | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'any') {
             obj = new CharacterClassAny();
         }
         return obj;
     }
+
     public generateAtom(): string {
         return '.';
     }
-};
+}
 
-class CharacterClassRange extends InvertibleExpression {
-    public escapedText!: string;
-    static keywords: { [keyword: string]: string } = {
+
+class CharacterClassRange extends InvertibleNode {
+
+    private escapedText!: string;
+
+    private static keywords: { [keyword: string]: string } = {
         'line-terminator': '\\r\\n\\u2028\\u2029', 'line-term': '\\r\\n\\u2028\\u2029',
         'terminator': '\\r\\n\\u2028\\u2029', 'term': '\\r\\n\\u2028\\u2029',
     };
-    static create(token: Token) {
+
+    public static create(token: Token) {
         let obj: CharacterClassRange | undefined = undefined;
         if (token.type === TokenType.CharacterClass) {
             obj = new CharacterClassRange(token.complement);
@@ -516,14 +555,18 @@ class CharacterClassRange extends InvertibleExpression {
         }
         return obj;
     }
+
     public generateAtom(): string {
         return `[${this.negative ? '^' : ''}${this.escapedText}]`;
     }
-};
+}
 
-class Literal extends Expression {
-    public unescapedText!: string;
-    static create(token: Token) {
+
+class Literal extends Node {
+
+    private unescapedText!: string;
+
+    public static create(token: Token) {
         let obj: Literal | undefined = undefined;
         if (token.type === TokenType.Literal) {
             obj = new Literal();
@@ -531,14 +574,18 @@ class Literal extends Expression {
         }
         return obj;
     }
+
     public generate(): string {
         return escapeRegExp(this.unescapedText);
     }
-};
+}
 
-class Backreference extends Expression {
-    public text!: string;
-    static create(token: Token, ctx: Context) {
+
+class Backreference extends Node {
+
+    private text!: string;
+
+    public static create(token: Token, ctx: Context) {
         let obj: Backreference | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'match') {
             obj = new Backreference();
@@ -554,28 +601,35 @@ class Backreference extends Expression {
         }
         return obj;
     }
+
     public generateAtom(): string {
         return this.text;
     }
-};
+}
 
-class WordBoundary extends InvertibleExpression {
-    static create(token: Token) {
+
+class WordBoundary extends InvertibleNode {
+
+    public static create(token: Token) {
         let obj: WordBoundary | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'word-boundary' || token.text === 'word-bound')) {
             obj = new WordBoundary(false);
         }
         return obj;
     }
+
     public generateAtom(): string {
         return this.negative ? '\\B' : '\\b';
     }
-};
+}
 
-class LineBoundary extends InvertibleExpression {
-    public start!: boolean;
-    public flags!: Flags;
-    static create(token: Token, ctx: Context) {
+
+class LineBoundary extends InvertibleNode {
+
+    private start!: boolean;
+    private flags!: Flags;
+
+    public static create(token: Token, ctx: Context) {
         let obj: LineBoundary | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'begin-of-line'
             || token.text === 'start-of-line' || token.text === 'end-of-line')
@@ -586,6 +640,7 @@ class LineBoundary extends InvertibleExpression {
         }
         return obj;
     }
+
     public generateAtom(): string {
         if (this.flags.multiline) {
             return this.start
@@ -597,12 +652,14 @@ class LineBoundary extends InvertibleExpression {
                 : (this.negative ? '(?![\\r\\n\\u2028\\u2029]|$)' : '(?=[\\r\\n\\u2028\\u2029]|$)');
         }
     }
-};
+}
 
-class TextBoundary extends InvertibleExpression {
-    public start!: boolean;
-    public negative!: boolean;
-    static create(token: Token, ctx: Context) {
+
+class TextBoundary extends InvertibleNode {
+
+    private start!: boolean;
+
+    public static create(token: Token, ctx: Context) {
         let obj: TextBoundary | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'begin-of-text'
             || token.text === 'start-of-text' || token.text === 'end-of-text')
@@ -613,17 +670,21 @@ class TextBoundary extends InvertibleExpression {
         }
         return obj;
     }
+
     public generateAtom(): string {
         return this.start
             ? (this.negative ? '(?<!^)' : '^')
             : (this.negative ? '(?!$)' : '$');
     }
-};
+}
 
-class Group extends Expression {
-    public id!: string | undefined;
-    public child!: Expression;
-    static create(token: Token, ctx: Context) {
+
+class Group extends Node {
+
+    private id!: string | undefined;
+    private child!: Node;
+
+    public static create(token: Token, ctx: Context) {
         let obj: Group | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'group') {
             obj = new Group();
@@ -638,6 +699,7 @@ class Group extends Expression {
         }
         return obj;
     }
+
     public generateAtom(): string {
         if (!this.id) {
             return `(${this.child.generate()})`;
@@ -645,13 +707,16 @@ class Group extends Expression {
             return `(?<${this.id}>${this.child.generate()})`;
         }
     }
-};
+}
 
-class LookGroup extends Expression {
-    public ahead!: boolean;
-    public negative!: boolean;
-    public child!: Expression;
-    static create(token: Token, ctx: Context) {
+
+class LookGroup extends Node {
+
+    private ahead!: boolean;
+    private negative!: boolean;
+    private child!: Node;
+
+    public static create(token: Token, ctx: Context) {
         let obj: LookGroup | undefined = undefined;
         let m: RegExpMatchArray | null;
         if (token.type === TokenType.Keyword && (m = token.text.match(/^look-?(ahead|behind)$/))) {
@@ -667,18 +732,23 @@ class LookGroup extends Expression {
         }
         return obj;
     }
+
     public generateAtom(): string {
         return `(?${this.ahead ? '' : '<'}${this.negative ? '!' : '='}${this.child.generate()})`;
     }
-};
+}
 
-class Quantifier extends Expression {
-    public static match = /^(?:(?<lazy>lazy-)?(?:(?:at-)?(?<type>most|least)|repeat)(?:-(?<from>[0-9]+))?(?:-(?<to>[0-9]+))?|(?<optional>optional))/;
-    public min: number = 0;
-    public max: number = Infinity;
-    public lazy: boolean = false;
-    public child!: Expression;
-    static create(token: Token, ctx: Context) {
+
+class Quantifier extends Node {
+
+    private min: number = 0;
+    private max: number = Infinity;
+    private lazy: boolean = false;
+    private child!: Node;
+
+    private static match = /^(?:(?<lazy>lazy-)?(?:(?:at-)?(?<type>most|least)|repeat)(?:-(?<from>[0-9]+))?(?:-(?<to>[0-9]+))?|(?<optional>optional))/;
+
+    public static create(token: Token, ctx: Context) {
         let obj: Quantifier | undefined = undefined;
         let m: RegExpMatchArray | null;
         if (token.type === TokenType.Keyword && (m = token.text.match(Quantifier.match))) {
@@ -711,6 +781,7 @@ class Quantifier extends Expression {
         }
         return obj;
     }
+
     public generate(): string {
         let result = this.child.generateAtom();
         if (this.max === Infinity) {
@@ -745,52 +816,53 @@ class Quantifier extends Expression {
 const verboseRegExpInfo = Symbol('verboseRegExpInfo');
 
 
-function parseOr(ctx: Context): Expression {
-    let a = parseList(ctx);
+function parseOr(ctx: Context): Node {
+    let left = parseList(ctx);
     let next = ctx.peek();
     if (next?.type !== TokenType.Keyword || next.text.toLowerCase() !== 'or') {
-        return a;
+        return left;
     }
     ctx.read();
-    let b = parseOr(ctx);
-    if (a instanceof OrExpression) {
-        if (b instanceof OrExpression) {
-            a.items.push(...b.items);
+    let right = parseOr(ctx);
+    if (left instanceof OrExpression) {
+        if (right instanceof OrExpression) {
+            left.items.push(...right.items);
         } else {
-            a.items.push(b);
+            left.items.push(right);
         }
-        return a;
-    } else if (b instanceof OrExpression) {
-        b.items.unshift(a);
-        return b;
+        return left;
+    } else if (right instanceof OrExpression) {
+        right.items.unshift(left);
+        return right;
     } else {
-        return new OrExpression([a, b]);
+        return new OrExpression([left, right]);
     }
 }
 
 
-function parseList(ctx: Context): Expression {
-    let items: Expression[] = [];
-    do {
-        let next = ctx.peek();
-        if (next && next.type !== TokenType.End && (next?.type !== TokenType.Keyword || next.text.toLowerCase() !== 'or')) {
-            items.push(parseLeaf(ctx));
-        } else {
-            break;
-        }
-    } while (true);
+function parseList(ctx: Context): Node {
+    let items: Node[] = [];
+    let next = ctx.peek();
+    while (next && next.type !== TokenType.End
+        && !(next?.type === TokenType.Keyword && next.text.toLowerCase() === 'or')
+    ) {
+        items.push(parseLeaf(ctx));
+        next = ctx.peek();
+    }
     if (items.length === 0) {
-        return new List(ctx);
+        return new List();
     } else if (items.length === 1) {
         return items[0];
     } else {
-        return new List(ctx, items);
+        return new List(items);
     }
 }
 
 
-function parseLeaf(ctx: Context): Expression {
+function parseLeaf(ctx: Context): Node {
+
     let token = ctx.read();
+
     switch (token?.type) {
         case TokenType.Begin: {
             let a = parseOr(ctx);
@@ -806,8 +878,8 @@ function parseLeaf(ctx: Context): Expression {
             throw ctx.error(token, 'Unexpected closing bracket.');
         case TokenType.Identifier:
             throw ctx.error(token, `Unexpected identifier "<${token.text}>".`);
-        case TokenType.SubBegin:
-        case TokenType.SubEnd:
+        case TokenType.InterpolationBegin:
+        case TokenType.InterpolationEnd:
             throw ctx.error(token, 'Unexpected token.');
         case TokenType.CharacterClass:
         case TokenType.Keyword:
@@ -815,17 +887,17 @@ function parseLeaf(ctx: Context): Expression {
             break;
     }
 
-    let exp: Expression | undefined;
+    let node: Node | undefined;
 
     if (token.type === TokenType.Keyword && token.text === 'not') {
-        exp = parseLeaf(ctx);
-        if (exp instanceof InvertibleExpression) {
-            exp.negative = !exp.negative;
+        node = parseLeaf(ctx);
+        if (node instanceof InvertibleNode) {
+            node.negative = !node.negative;
         } else {
             throw ctx.error(token, 'The "not" keyword is not allowed before this expression.');
         }
     } else {
-        exp = CharacterClassEscape.create(token)
+        node = CharacterClassEscape.create(token)
             || CharacterClassSingle.create(token)
             || CharacterClassAny.create(token)
             || CharacterClassRange.create(token)
@@ -840,23 +912,32 @@ function parseLeaf(ctx: Context): Expression {
             ;
     }
 
-    if (!exp) {
+    if (!node) {
         throw ctx.error(token, `Unknown keyword "${token.text}".`);
     }
-    return exp;
+
+    return node;
 }
 
 
-export function parse(text: string, prefix: string, values: (string | SubFullInfo)[]): RegExp {
+export function parse(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): RegExp {
 
-    let tokens = tokenize(text, prefix, values);
-    //console.log(tokens); return new RegExp('');
-    let subInfo: SubFullInfo = {
-        interpolationPrefix: prefix,
+    let ctx: Context;
+    let expressionInfo: ExpressionTokenized = {
+        interpolationPrefix: interpolationPrefix,
         sourceCode: text,
-        tokens: tokens,
+        tokens: [],
     };
-    let ctx = new Context(subInfo);
+    try {
+        expressionInfo.tokens = tokenize(text, interpolationPrefix, values);
+        ctx = new Context(expressionInfo);
+    } catch (err) {
+        if (err instanceof TokenizerError) {
+            ctx = new Context(expressionInfo);
+            throw ctx.error({ position: err.position, type: TokenType.Begin }, err.message);
+        }
+        throw err;
+    }
 
     let expr = parseOr(ctx);
     let pattern = expr.generate();
@@ -873,7 +954,7 @@ export function parse(text: string, prefix: string, values: (string | SubFullInf
     Object.defineProperty(result, verboseRegExpInfo, {
         configurable: false,
         enumerable: false,
-        value: subInfo,
+        value: expressionInfo,
         writable: false,
     });
     return result;
@@ -891,18 +972,19 @@ export function vre(str: TemplateStringsArray, ...values: any[]) {
         let raw = str.raw;
         let prefix = randPrefixForText(raw);
         let input = raw[0];
-        let valuesProcessed: (string | SubFullInfo)[] = [];
+        let valuesProcessed: (string | ExpressionTokenized)[] = [];
         for (let i = 0; i < values.length; i++) {
             let value = values[i];
             input += prefix + i + '}' + raw[i + 1];
-            if (value instanceof RegExp && value[verboseRegExpInfo]) {
-                valuesProcessed.push(value[verboseRegExpInfo] as SubFullInfo);
+            if (value instanceof RegExp && (value as any)[verboseRegExpInfo]) {
+                valuesProcessed.push((value as any)[verboseRegExpInfo] as ExpressionTokenized);
             } else {
                 valuesProcessed.push(`${values[i]}`);
             }
         }
         return parse(input, prefix, valuesProcessed);
     } catch (err) {
+        // Rethrow the error to remove internal stacktrace.
         if (err instanceof VREError) {
             throw new VREError(err.message);
         }
@@ -910,76 +992,5 @@ export function vre(str: TemplateStringsArray, ...values: any[]) {
     }
 }
 
+
 // #endregion
-
-
-let a = "Thi\"\\`\`s$ is [test]";
-let b = "not [x-y]";
-
-console.log(vre`
-<FIRST, IGNORE-CASE, STICKY>
-
-repeat whitespace // ignore leading whitespace
-
-{
-    // Opening bracket
-    group<begin> [{(]
-or
-    // Closing bracket
-    group<end> [)}]
-or
-    // Keyword
-    group<keyword> at-least-1 [a-z0-9\\-]
-or
-    // Literal string 
-    group<literal> {
-        ["]
-        lazy-repeat ("\\" any or any)
-        ["]
-    } 
-or
-    // Identifier (group name, flags)
-    {
-        "<"
-        group<identifier>(lazy-repeat(any))
-        ">"
-    }
-or
-    // Character class
-    {
-        "["
-        optional group<complement> "^"
-        group<characterClass> lazy-repeat ("\\" any or any)
-        "]"
-    }
-or
-    // Magic string for filling it with content
-    {
-        group<prefix> ("\`" at-least-1([A-Z]))
-        group<index> at-least-1([0-9])
-        "}"
-    }
-or
-    // Multiline comment
-    group<comment1> {
-        "/*" lazy-repeat any "* /"
-    }
-or
-    // Singleline comment
-    group<comment2> {
-        "//" lazy-repeat(any) end-of-line
-    }
-}
-
-repeat whitespace // ignore trailing whitespace
-`);
-
-let ic = '<IGNORE-CASE> any';
-
-let sub = vre`<IGNORE-CASE> "a"
- "b" 
- "c" ${ic}`;
-
-console.log(vre`<IGNORE-CASE> "x" 
-"y" ${sub}
- "z" "w"`);
