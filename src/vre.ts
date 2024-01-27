@@ -2,19 +2,21 @@
 // #region Utilities
 
 
-function randPrefix(length: number): string {
-    let result = '`';
-    for (let i = 0; i < length; i++) {
-        result += String.fromCharCode(65 + Math.floor(Math.random() * 26));
+let prefixGenChars = 'QVRZJQXVKRLADFFXZCQEIKOKJPIXJXKOMJXMYCAHDJZUFTGFMIVPCPLPNNVNCTPVXUXXNTLGVPPQOOHVFMJDZFWQYECCNYFL';
+
+
+function generatePrefix(length: number): string {
+    while (2 * length > prefixGenChars.length) {
+        prefixGenChars = prefixGenChars.repeat(2);
     }
-    return result;
+    return '`' + prefixGenChars.substring(length, 2 * length);
 }
 
 
-function randPrefixForText(text: readonly string[]): string {
-    let prefix = randPrefix(3);
+function generatePrefixForText(text: readonly string[]): string {
+    let prefix = generatePrefix(3);
     while (text.some(x => x.indexOf(prefix) >= 0)) {
-        prefix = randPrefix(prefix.length + 1);
+        prefix = generatePrefix(prefix.length + 1);
     }
     return prefix;
 }
@@ -64,6 +66,7 @@ interface ExpressionTokenized extends ExpressionSource {
 enum TokenType {
     Literal,
     Identifier,
+    Label,
     Keyword,
     CharacterClass,
     Begin,
@@ -73,7 +76,7 @@ enum TokenType {
 }
 
 interface TextToken {
-    type: TokenType.Literal | TokenType.Identifier | TokenType.Keyword;
+    type: TokenType.Literal | TokenType.Identifier | TokenType.Label | TokenType.Keyword;
     position: number;
     text: string;
 }
@@ -101,6 +104,7 @@ type Token = TextToken | CharacterClassToken | EmptyToken | InterpolationBeginTo
 interface TokenRegexGroups {
     begin?: string;
     end?: string;
+    label?: string;
     keyword?: string;
     literal?: string;
     identifier?: string;
@@ -113,7 +117,7 @@ interface TokenRegexGroups {
 }
 
 
-const tokenRegexBase = /\s*(?:(?<begin>[{(])|(?<end>[})])|(?<keyword>[a-z0-9\\-]+)|(?<literal>"(?:\\[\s\S]|[\s\S])*?")|(?:<(?<identifier>[\s\S]*?)>)|(?:\[(?<complement>\^)?(?<characterClass>(?:\\[\s\S]|[\s\S])*?)\])|(?:(?<prefix>`[A-Z]+)(?<index>[0-9]+)\})|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?(?:\n|$)))\s*/isy;
+const tokenRegexBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)\s*/msy;
 
 
 function tokenize(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): Token[] {
@@ -127,6 +131,8 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
             result.push({ position, type: TokenType.Begin });
         } else if (groups.end !== undefined) {
             result.push({ position, type: TokenType.End });
+        } else if (groups.label !== undefined) {
+            result.push({ position, type: TokenType.Label, text: groups.label });
         } else if (groups.keyword !== undefined) {
             result.push({ position, type: TokenType.Keyword, text: groups.keyword.toLowerCase() });
         } else if (groups.literal !== undefined) {
@@ -170,7 +176,7 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
         } else if (groups.prefix === interpolationPrefix) {
             let value = values[parseInt(groups.index as string)];
             if (typeof value === 'string') {
-                let innerPrefix = randPrefixForText([value]);
+                let innerPrefix = generatePrefixForText([value]);
                 result.push({
                     position,
                     type: TokenType.InterpolationBegin,
@@ -211,6 +217,7 @@ interface Flags {
     ignoreCase: boolean;
     unicode: boolean;
     sticky: boolean;
+    cache: boolean;
 }
 
 
@@ -342,6 +349,7 @@ class Context {
             ignoreCase: false,
             unicode: false,
             sticky: false,
+            cache: false,
         };
         while (this.info.tokens[this.index]?.type === TokenType.Identifier) {
             let flagToken = this.info.tokens[this.index++] as TextToken;
@@ -366,6 +374,9 @@ class Context {
                         break;
                     case 'sticky':
                         flags.sticky = true;
+                        break;
+                    case 'cache':
+                        flags.cache = true;
                         break;
                     default:
                         throw this.error(flagToken, `Unknown flag "${flag}".`);
@@ -711,13 +722,11 @@ class Group extends Node {
         let obj: Group | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'group') {
             obj = new Group();
-            let idToken = ctx.peek() as TextToken | undefined;
-            if (idToken?.type !== TokenType.Identifier) {
-                obj.id = undefined;
-            } else {
-                obj.id = idToken.text;
-                ctx.read();
-            }
+            obj.id = undefined;
+            obj.child = parseLeaf(ctx);
+        } else if (token.type === TokenType.Label) {
+            obj = new Group();
+            obj.id = token.text;
             obj.child = parseLeaf(ctx);
         }
         return obj;
@@ -903,6 +912,7 @@ function parseLeaf(ctx: Context): Node {
         case TokenType.InterpolationEnd:
             throw ctx.error(token, 'Unexpected token.');
         case TokenType.CharacterClass:
+        case TokenType.Label:
         case TokenType.Keyword:
         case TokenType.Literal:
             break;
@@ -942,7 +952,8 @@ function parseLeaf(ctx: Context): Node {
 }
 
 
-function parse(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): RegExp {
+function parse(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[],
+    useCache: boolean): RegExp {
 
     let ctx: Context;
     let expressionInfo: ExpressionTokenized = {
@@ -971,6 +982,9 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
     if (ctx.flags.unicode) flags += 'u';
     // TODO: implement v flag: if (ctx.flags.unicodeSets) flags += 'v';
     if (ctx.flags.sticky) flags += 'y';
+    if (ctx.flags.cache && !useCache) {
+        throw ctx.error(ctx.info.tokens[0], 'Cache flag must be the first.');
+    }
 
     let result = new RegExp(pattern, flags);
     Object.defineProperty(result, verboseRegExpInfo, {
@@ -989,22 +1003,72 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
 // #region Interface
 
 
+type CacheNode = Map<string | number, CacheNode | RegExp>;
+
+const cacheDetectionRegExp = /^\s*<CACHE>/i;
+const cache = new Map<string, CacheNode | RegExp>();
+const cacheExpId = new WeakMap<RegExp, number>();
+let cacheExpIdLast = 1;
+
+
 export default function vre(str: TemplateStringsArray, ...values: any[]) {
     try {
         let raw = str.raw;
-        let prefix = randPrefixForText(raw);
+        let prefix = generatePrefixForText(raw);
         let input = raw[0];
         let valuesProcessed: (string | ExpressionTokenized)[] = [];
+        let cacheKeys: (string | number)[] | undefined = input.match(cacheDetectionRegExp) ? [] : undefined;
+
         for (let i = 0; i < values.length; i++) {
             let value = values[i];
             input += prefix + i + '}' + raw[i + 1];
             if (value instanceof RegExp && (value as any)[verboseRegExpInfo]) {
                 valuesProcessed.push((value as any)[verboseRegExpInfo] as ExpressionTokenized);
+                let id = cacheExpId.get(value);
+                if (id === undefined) {
+                    id = cacheExpIdLast++;
+                    cacheExpId.set(value, id);
+                }
+                cacheKeys?.push?.(id);
             } else {
-                valuesProcessed.push(`${values[i]}`);
+                if (typeof value !== 'string') {
+                    value = `${value}`;
+                }
+                valuesProcessed.push(value);
+                cacheKeys?.push?.(value);
             }
         }
-        return parse(input, prefix, valuesProcessed);
+
+        if (cacheKeys) {
+            let cached: CacheNode | RegExp | undefined = cache.get(input);
+            for (let i = 0; i < cacheKeys.length && cached; i++) {
+                if (cached instanceof Map) {
+                    cached = cached.get(cacheKeys[i]);
+                }
+            }
+            if (cached instanceof RegExp) {
+                return new RegExp(cached);
+            }
+        }
+
+        let result = parse(input, prefix, valuesProcessed, !!cacheKeys);
+
+        if (cacheKeys) {
+            let cacheMap: CacheNode = cache;
+            let key: string | number = input;
+            for (let i = 0; i < cacheKeys.length; i++) {
+                let nextMap = cacheMap.get(key);
+                if (!(nextMap instanceof Map)) {
+                    nextMap = new Map();
+                    cacheMap.set(key, nextMap);
+                }
+                cacheMap = nextMap
+                key = cacheKeys[i];
+            }
+            cacheMap.set(key, result);
+        }
+
+        return result;
     } catch (err) {
         // Rethrow the error to remove internal stacktrace.
         if (err instanceof VREError) {

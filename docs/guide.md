@@ -27,22 +27,6 @@ Only disadvantage of using tagged templates is need for escaping
 backticks (`` ` `` => `` \` ``) and interpolation (`${` => `\${`).
 Otherwise, you can put there anything without worring about escaping.
 
-## Cache
-
-The regular expression can be cached, so once it get translated
-into RegExp, the VRE will return copy of same object for the same
-input string. It is done using `vre.cache` tag, for example:
-
-```javascript
-let match = input.match(vre.cache`repeat digit`);
-```
-
-> [!WARNING]
-> Be careful with the interpolation and cache. If interpolated values are
-> changing, cache will keep regular expression for each value. Frequently changing
-> values may lead to memory leaks.
-
-
 ## Flags
 
 The VRE starts with the flags. Flags are enclosed in `<` and `>`.
@@ -59,6 +43,7 @@ Flag name | RegExp equivalent | Description
 `<IGNORE-CASE>` | [`i`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) | Case-insensitive. Alias: `<CASE-INSENSITIVE>`.
 `<UNICODE>` | [`u`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) | Unicode code points.
 `<STICKY>` | [`y`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) | Sticky search.
+`<CACHE>` | | Use VRE cache, see below.
 
 The flag names are case-insensitive, but it's better to use uppercase,
 since they are significantly affecting the rest of the expression.
@@ -66,6 +51,25 @@ since they are significantly affecting the rest of the expression.
 You may notice that some RegExp flags are not listed above.
 The `m` and `s` flags are handled automatically by the VRE and you don't need to know
 about their status. The `v` flag is not implemented yet.
+
+## Cache
+
+The regular expression can be cached, so once it get translated
+into RegExp, the VRE will return copy of same object for the same
+input string and interpolated values. It is done using `<CACHE>` flag that must be the
+first flag in the expression, for example:
+
+```javascript
+let match = input.match(vre`<CACHE> repeat digit`);
+```
+
+If high performance is your goal, better solution would be to put the expression
+in a variable just once and reuse it, for example in global `const`.
+
+> [!WARNING]
+> Be careful with the interpolation and cache. If interpolated values are
+> changing, cache will keep regular expression for each value. Frequently changing
+> values may lead to memory leaks.
 
 ## Literal
 

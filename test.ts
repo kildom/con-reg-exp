@@ -31,30 +31,10 @@ eq(vre`not start-of-line`, /(?<!^)/gms);
 eq(vre`not begin-of-text not begin-of-line not end-of-line not end-of-text`, /(?<!^)(?<![\r\n\u2028\u2029]|^)(?![\r\n\u2028\u2029]|$)(?!$)/gs);
 eq(vre`not start-of-text not start-of-line`, /(?<!^)(?<![\r\n\u2028\u2029]|^)/gs);
 
-function x(x: string) {
-    return vre;
-}
 
-console.log(vre.cache`<FIRST>
-begin-of-text
-optional group<lazy> ("lazy-" or "non-greeny-")
-{
-    group<optional> "optional"
-or
-    group<repeat> "repeat"
-or
-    optional "repeat-"
-    {
-        optional "at-"
-        (group<least> "least-" or group<most> "most-")
-        group<count> at-least-1 digit
-    or
-        group<min> at-least-1 digit
-        optional ("-to-" group<max> at-least-1 digit)
-    }
-    optional ("-time" optional "s")
-}
-end-of-text
-`);
+let abc = vre`"abc"`
+console.log(vre`<CACHE>${abc}`);
+console.log(vre`<CACHE>${abc}`);
+
 // Lookahead assertion: (?=...), (?!...)
 
