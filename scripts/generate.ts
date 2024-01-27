@@ -3,7 +3,7 @@ import vre from '../src/vre';
 console.log('\n');
 
 
-console.log(`const tokenRegexBase = ${vre`<FIRST> <STICKY>
+console.log(`const tokenRegExpBase = ${vre`<FIRST> <STICKY>
 
 repeat whitespace
 {
@@ -65,7 +65,7 @@ or
 end-of-text
 `};\n`);
 
-console.log(`const cacheDetectionRegExp = ${vre`<CACHE> <FIRST> <IGNORE-CASE>
+console.log(`const cacheDetectionRegExp = ${vre`<FIRST> <IGNORE-CASE>
 begin-of-text
 repeat whitespace
 "<CACHE>"

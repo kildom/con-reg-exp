@@ -101,7 +101,7 @@ interface InterpolationBeginToken {
 
 type Token = TextToken | CharacterClassToken | EmptyToken | InterpolationBeginToken;
 
-interface TokenRegexGroups {
+interface TokenRegExpGroups {
     begin?: string;
     end?: string;
     label?: string;
@@ -117,13 +117,13 @@ interface TokenRegexGroups {
 }
 
 
-const tokenRegexBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)\s*/msy;
+const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)\s*/msy;
 
 
 function tokenize(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): Token[] {
     let result: Token[] = [];
-    let tokenRegex = new RegExp(tokenRegexBase);
-    let groups: TokenRegexGroups | undefined;
+    let tokenRegex = new RegExp(tokenRegExpBase);
+    let groups: TokenRegExpGroups | undefined;
     let position = 0;
     let prefixReplace: RegExp | undefined = undefined;
     while ((groups = tokenRegex.exec(text)?.groups)) {
@@ -769,43 +769,52 @@ class LookGroup extends InvertibleNode {
 }
 
 
+interface QuantifierRegExpGroups {
+    lazy?: string;
+    optional?: string;
+    repeat?: string;
+    least?: string;
+    most?: string;
+    count?: string;
+    min?: string;
+    max?: string;
+}
+
+const quantifierRegExp = /^(?<lazy>lazy-|non-greeny-)?(?:(?<optional>optional)|(?<repeat>repeat)|(?:repeat-)?(?:(?:at-)?(?:(?<least>least-)|(?<most>most-))(?<count>\d+)|(?<min>\d+)(?:-to-(?<max>\d+))?)(?:-times?)?)$/s;
+
+
 class Quantifier extends Node {
 
-    private min: number = 0;
-    private max: number = Infinity;
-    private lazy: boolean = false;
+    private min!: number;
+    private max!: number;
+    private lazy!: boolean;
     private child!: Node;
-
-    private static match = /^(?:(?<lazy>lazy-)?(?:(?:at-)?(?<type>most|least)|repeat)(?:-(?<from>[0-9]+))?(?:-(?<to>[0-9]+))?|(?<optional>optional))/;
 
     public static create(token: Token, ctx: Context) {
         let obj: Quantifier | undefined = undefined;
-        let m: RegExpMatchArray | null;
-        if (token.type === TokenType.Keyword && (m = token.text.match(Quantifier.match))) {
+        let m2: RegExpMatchArray | null;
+        if (token.type === TokenType.Keyword && (m2 = token.text.match(quantifierRegExp))) {
+            let groups = m2.groups as QuantifierRegExpGroups;
             obj = new Quantifier();
-            obj.lazy = !!m.groups?.lazy;
-            if (m.groups?.optional) {
+            obj.lazy = !!groups.lazy;
+            if (groups.optional) {
                 obj.min = 0;
                 obj.max = 1;
-            } else if (!m.groups?.type) {
-                if (m.groups?.from === undefined) {
-                    // 0 - Inf
-                } else if (m.groups?.to === undefined) {
-                    obj.min = parseInt(m.groups?.from);
-                    obj.max = parseInt(m.groups?.from);
-                } else {
-                    obj.min = parseInt(m.groups?.from);
-                    obj.max = parseInt(m.groups?.to);
-                }
+            } else if (groups.repeat) {
+                obj.min = 0;
+                obj.max = Infinity;
+            } else if (groups.least) {
+                obj.min = parseInt(groups.count as string);
+                obj.max = Infinity;
+            } else if (groups.most) {
+                obj.min = 0;
+                obj.max = parseInt(groups.count as string);
+            } else if (groups.max !== undefined) {
+                obj.min = parseInt(groups.min as string);
+                obj.max = parseInt(groups.max as string);
             } else {
-                if (m.groups?.from === undefined || m.groups?.to !== undefined) {
-                    throw ctx.error(token, 'Exactly one number expected.');
-                }
-                if (m.groups?.type === 'most') {
-                    obj.max = parseInt(m.groups?.from);
-                } else {
-                    obj.min = parseInt(m.groups?.from);
-                }
+                obj.min = parseInt(groups.min as string);
+                obj.max = parseInt(groups.min as string);
             }
             obj.child = parseLeaf(ctx);
         }
