@@ -519,18 +519,18 @@ class CharacterClassSingle extends InvertibleNode {
 }
 
 
-class CharacterClassAny extends Node {
+class CharacterClassAny extends InvertibleNode {
 
     public static create(token: Token) {
         let obj: CharacterClassAny | undefined = undefined;
         if (token.type === TokenType.Keyword && token.text === 'any') {
-            obj = new CharacterClassAny();
+            obj = new CharacterClassAny(false);
         }
         return obj;
     }
 
     public generateAtom(): string {
-        return '.';
+        return this.negative ? '[]' : '.';
     }
 }
 
@@ -568,7 +568,6 @@ class CharacterClassProperty extends InvertibleNode {
 
     public static create(token: Token, ctx: Context) {
         let obj: CharacterClassProperty | undefined = undefined;
-        let m: RegExpMatchArray | null;
         if (token.type === TokenType.Keyword && (token.text === 'prop' || token.text === 'property')) {
             obj = new CharacterClassProperty(false);
             let id = ctx.read();
@@ -943,7 +942,7 @@ function parseLeaf(ctx: Context): Node {
 }
 
 
-export function parse(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): RegExp {
+function parse(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): RegExp {
 
     let ctx: Context;
     let expressionInfo: ExpressionTokenized = {
@@ -990,7 +989,7 @@ export function parse(text: string, interpolationPrefix: string, values: (string
 // #region Interface
 
 
-export function vre(str: TemplateStringsArray, ...values: any[]) {
+export default function vre(str: TemplateStringsArray, ...values: any[]) {
     try {
         let raw = str.raw;
         let prefix = randPrefixForText(raw);
