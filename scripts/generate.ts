@@ -14,7 +14,7 @@ or
     label: ([a-zA-Z_] repeat [a-zA-Z0-9_])
     ":"
 or
-    keyword: at-least-1 [a-zA-Z0-9\\-]
+    keyword: at-least-1 [a-zA-Z0-9\u2011\\-]
 or
     literal: {
         ["]

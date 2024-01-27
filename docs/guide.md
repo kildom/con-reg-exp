@@ -182,9 +182,9 @@ Keyword | RegExp equivalent | Complement RegExp | Description | Aliases
 --------|-------------------|-------------------|-------------|--------
 `any` | `.` with `s` flag | `[]` | Matches any character
 `digit` | `\d` | `\D` | Digit
-`white-space` | `\s` | `\S` | Whitespace | `whitespace`
-`word-character` | `\w` | `\W` | Word characters (`A` to `Z`, `a` to `z`, `0` to `9`, `_`) | `word-char`
-`line-terminator` | `[\r\n\u2028\u2029]` | `.` without `s` flag | Character that terminates the line | `line-term` `terminator` `term`
+`white‑space` | `\s` | `\S` | Whitespace | `whitespace`
+`word‑character` | `\w` | `\W` | Word characters (`A` to `Z`, `a` to `z`, `0` to `9`, `_`) | `word-char`
+`line‑terminator` | `[\r\n\u2028\u2029]` | `.` without `s` flag | Character that terminates the line | `line-term` `terminator` `term`
 
 ```javascript
 let hasDigit = vre`digit`.test(input);
@@ -201,15 +201,18 @@ let onlyDigits = input.replace(vre`not digit`, '');
 Quantifiers tells how many times the following node must match.
 Those are equivalents of `?`, `*`, `+`, `{n,m}` in RegExp notation.
 
-Keyword | RegExp equivalent | Minimum | Maximum |
---------|-------------------|---------|----------
+Quantifier is a keyword with flexible syntax. Some parts of it are optional,
+so it gives you a flexibility in writing quantifiers.
+
+Keyword | RegExp<br/>equivalent | Min | Max | Comment 
+--------|-------------------|-----|-----|--------
 `optional`     | `?`     | 0 | 1
-`at-least-1`   | `+`     | 1 | ∞
-`at-least-N`   | `{N,}`  | N | ∞
-`at-most-N`    | `{0,N}` | 0 | N
+`at‑least‑1`   | `+`     | 1 | ∞ | You can skip `at-` and optionally add `repeat-` prefix or `-times` suffix.
+`at‑least‑N`   | `{N,}`  | N | ∞ | You can skip `at-` and optionally add `repeat-` prefix or `-times` suffix.
+`at‑most‑N`    | `{0,N}` | 0 | N | You can skip `at-` and optionally add `repeat-` prefix or `-times` suffix.
 `repeat`       | `*`     | 1 | ∞
-`N-times`      | `{N}`   | N | N
-`N-to-M-times` | `{N,M}` | N | M
+`N‑times`      | `{N}`   | N | N | You can skip `-times` and optionally add `repeat-` prefix.
+`N‑to‑M‑times` | `{N,M}` | N | M | You can skip `-times` and optionally add `repeat-` prefix.
 
 
 Those are "greedy" quantifiers. They match as many times as possible

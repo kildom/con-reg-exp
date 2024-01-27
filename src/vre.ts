@@ -117,7 +117,7 @@ interface TokenRegExpGroups {
 }
 
 
-const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)\s*/msy;
+const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)\s*/msy;
 
 
 function tokenize(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): Token[] {
@@ -134,7 +134,11 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
         } else if (groups.label !== undefined) {
             result.push({ position, type: TokenType.Label, text: groups.label });
         } else if (groups.keyword !== undefined) {
-            result.push({ position, type: TokenType.Keyword, text: groups.keyword.toLowerCase() });
+            result.push({
+                position,
+                type: TokenType.Keyword,
+                text: groups.keyword.toLowerCase().replace(/\u2011/g, '-'),
+            });
         } else if (groups.literal !== undefined) {
             let content = groups.literal;
             if (content.indexOf(interpolationPrefix) >= 0) {
