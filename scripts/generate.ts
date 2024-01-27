@@ -70,3 +70,34 @@ begin-of-text
 repeat whitespace
 "<CACHE>"
 `};\n`);
+
+const number = vre`
+    optional [+-]                   // Sign
+    {
+        at-least-1 digit            // Integral part
+        optional ("." repeat digit) // Optional factional part
+    or
+        "." at-least-1 digit        // Variant with only fractional part
+    }
+    optional {                      // Optional exponent part
+        [eE]
+        optional [+-]
+        at-least-1 digit
+    }
+`;
+
+const ws = vre`repeat whitespace`;
+
+console.log(vre`<CACHE> <FIRST>
+        begin-of-text ${ws}
+        "[" ${ws}               // Begin of array
+        optional {              // Array can be empty
+            repeat {            // Numbers ended with comma
+                ${number} ${ws}
+                "," ${ws}
+            }
+            ${number} ${ws}   // Last number has no comma
+        }
+        "]" ${ws}
+        end-of-text
+    `);
