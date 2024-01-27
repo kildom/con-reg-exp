@@ -233,7 +233,7 @@ Keyword | RegExp<br/>equivalent | Min | Max | Comment
 `at‑least‑1`   | `+`     | 1 | ∞ | You can skip `at‑` and optionally add `repeat‑` prefix or `‑times` suffix.
 `at‑least‑N`   | `{N,}`  | N | ∞ | You can skip `at‑` and optionally add `repeat‑` prefix or `‑times` suffix.
 `at‑most‑N`    | `{0,N}` | 0 | N | You can skip `at‑` and optionally add `repeat‑` prefix or `‑times` suffix.
-`repeat`       | `*`     | 1 | ∞
+`repeat`       | `*`     | 0 | ∞
 `N‑times`      | `{N}`   | N | N | You can skip `‑times` and optionally add `repeat‑` prefix.
 `N‑to‑M‑times` | `{N,M}` | N | M | You can skip `‑times` and optionally add `repeat‑` prefix.
 

@@ -1,7 +1,7 @@
 # Verbose Regular Expressions
 
 〚 Guide 〛&nbsp;
-〚 [Syntax overview](docs/overwiev.md) 〛&nbsp;
+〚 [Syntax overview](docs/overview.md) 〛&nbsp;
 〚 Installing 〛&nbsp;
 
 This is a JavaScript module that provides different syntax for regular expressions.
@@ -110,7 +110,7 @@ function guessWhatDoesThisFunction(text) {
 ```
 
 Which one was easier to understand? I assuming that you don't know
-the verbose regular expressions [syntax](docs/overwiev.md) yet. Were you able to guess
+the verbose regular expressions [syntax](docs/overview.md) yet. Were you able to guess
 despite this?
 
 Click or hover the link to see [the answer](#It-validates-if-the-input-is-a-json-containing-an-array-of-numbers).
