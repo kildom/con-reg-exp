@@ -1,7 +1,10 @@
 {
     "cSpell.words": [
         "Backreference",
-        "endregion"
+        "endregion",
+        "vmode"
     ],
     "editor.rulers": [ 120 ],
+    "editor.unicodeHighlight.includeStrings": true,
+    "editor.unicodeHighlight.ambiguousCharacters": true,
 }

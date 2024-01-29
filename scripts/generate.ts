@@ -21,8 +21,8 @@ import vre from '../src/vre';
 console.log('\n');
 
 
-console.log(`const tokenRegExpBase = ${vre`<FIRST> <STICKY>
-
+console.log(`const tokenRegExpBase = ${vre.first.sticky.legacy`
+begin-of-text
 repeat whitespace
 {
     begin: [{(]
@@ -60,8 +60,45 @@ or
 repeat whitespace
 `};\n`);
 
+console.log(`const tokenRegExpVMode = ${vre.first.sticky.legacy`
+begin-of-text
+repeat whitespace
+{
+    begin: [{(]
+or
+    end: [)}]
+or
+    label: ([a-zA-Z_] repeat [a-zA-Z0-9_])
+    ":"
+or
+    keyword: at-least-1 [a-zA-Z0-9\u2011\\-]
+or
+    literal: {
+        ["]
+        lazy-repeat ("\\" any or any)
+        ["]
+    }
+or
+    "<"
+    identifier: lazy-repeat any
+    ">"
+or
+    characterClassVMode: "["
+    optional complement: "^"
+or
+    prefix: ("\`" at-least-3 [A-Z])
+    index: at-least-1 [0-9]
+    "}"
+or
+    comment1: ("/*" lazy-repeat any "*/")
+or
+    comment2: ("//" lazy-repeat any) end-of-line
+}
+repeat whitespace
+`};\n`);
 
-console.log(`const quantifierRegExp = ${vre`<FIRST>
+
+console.log(`const quantifierRegExp = ${vre.first`
 begin-of-text
 optional lazy: ("lazy-" or "non-greeny-")
 {
@@ -83,12 +120,6 @@ or
 end-of-text
 `};\n`);
 
-console.log(`const cacheDetectionRegExp = ${vre`<FIRST> <IGNORE-CASE>
-begin-of-text
-repeat whitespace
-"<CACHE>"
-`};\n`);
-
 const number = vre`
     optional [+-]                   // Sign
     {
@@ -106,7 +137,7 @@ const number = vre`
 
 const ws = vre`repeat whitespace`;
 
-console.log(vre`<CACHE> <FIRST>
+console.log(vre.cache.first`
         begin-of-text ${ws}
         "[" ${ws}               // Begin of array
         optional {              // Array can be empty

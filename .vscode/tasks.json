@@ -6,7 +6,7 @@
         {
             "label": "Build",
             "type": "shell",
-            "command": "npx tsc --sourcemap --downlevelIteration *.ts",
+            "command": "npx tsc --declaration --sourcemap --downlevelIteration src/*.ts test/*.ts",
             "problemMatcher": []
         }
     ]

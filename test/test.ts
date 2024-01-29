@@ -42,31 +42,36 @@ function except(func: any) {
 
 // Input boundary assertion: ^, $
 
-eq(vre`begin-of-text end-of-text`, /^$/gs);
-eq(vre`start-of-text`, /^/gs);
+eq(vre`begin-of-text end-of-text`, /^$/gsu);
+eq(vre`start-of-text`, /^/gsu);
 
-eq(vre`begin-of-line end-of-line`, /^$/gms);
-eq(vre`start-of-line`, /^/gms);
+eq(vre`begin-of-line end-of-line`, /^$/gmsu);
+eq(vre`start-of-line`, /^/gmsu);
 
-eq(vre`begin-of-text begin-of-line end-of-line end-of-text`, /^(?<=[\r\n\u2028\u2029]|^)(?=[\r\n\u2028\u2029]|$)$/gs);
-eq(vre`start-of-text start-of-line`, /^(?<=[\r\n\u2028\u2029]|^)/gs);
+eq(vre`begin-of-text begin-of-line end-of-line end-of-text`, /^(?<=[\r\n\u2028\u2029]|^)(?=[\r\n\u2028\u2029]|$)$/gsu);
+eq(vre`start-of-text start-of-line`, /^(?<=[\r\n\u2028\u2029]|^)/gsu);
 
-eq(vre`not begin-of-text not end-of-text`, /(?<!^)(?!$)/gs);
-eq(vre`not start-of-text`, /(?<!^)/gs);
+eq(vre`not begin-of-text not end-of-text`, /(?<!^)(?!$)/gsu);
+eq(vre`not start-of-text`, /(?<!^)/gsu);
 
-eq(vre`not begin-of-line not end-of-line`, /(?<!^)(?!$)/gms);
-eq(vre`not start-of-line`, /(?<!^)/gms);
+eq(vre`not begin-of-line not end-of-line`, /(?<!^)(?!$)/gmsu);
+eq(vre`not start-of-line`, /(?<!^)/gmsu);
 
-eq(vre`not begin-of-text not begin-of-line not end-of-line not end-of-text`, /(?<!^)(?<![\r\n\u2028\u2029]|^)(?![\r\n\u2028\u2029]|$)(?!$)/gs);
-eq(vre`not start-of-text not start-of-line`, /(?<!^)(?<![\r\n\u2028\u2029]|^)/gs);
+eq(vre`not begin-of-text not begin-of-line not end-of-line not end-of-text`, /(?<!^)(?<![\r\n\u2028\u2029]|^)(?![\r\n\u2028\u2029]|$)(?!$)/gsu);
+eq(vre`not start-of-text not start-of-line`, /(?<!^)(?<![\r\n\u2028\u2029]|^)/gsu);
 
 // Lookahead assertion: (?=...), (?!...)
+
+// Upgraded unicode
+
+eq(vre.unicode`[\w--_]`, /[\w--_]/gmsv);
 
 // Interpolation, mismatching flags
 
 except(() => {let abc = vre.ignoreCase`"abc"`; vre`${abc}`; });
 except(() => {let abc = vre`"abc"`; vre.ignoreCase`${abc}`; });
-except(() => {let abc = vre.unicode`"abc"`; vre`${abc}`; });
-except(() => {let abc = vre`"abc"`; vre.unicode`${abc}`; });
-except(() => {let abc = vre.ignoreCase.unicode`"abc"`; vre.unicode`${abc}`; });
-except(() => {let abc = vre.ignoreCase`"abc"`; vre.ignoreCase.unicode`${abc}`; });
+except(() => {let abc = vre.legacy`"abc"`; vre`${abc}`; });
+except(() => {let abc = vre`"abc"`; vre.legacy`${abc}`; });
+except(() => {let abc = vre.ignoreCase.legacy`"abc"`; vre.legacy`${abc}`; });
+except(() => {let abc = vre.ignoreCase`"abc"`; vre.ignoreCase.legacy`${abc}`; });
+

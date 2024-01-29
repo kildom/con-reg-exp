@@ -38,18 +38,23 @@ For example:
 let items = input.split(vre.ignoreCase.unicode`"and"`);
 ```
 
-Flag name | RegExp equivalent | Description
+Flag name | RegExp<br/>equivalent | Description
 ----|----|----
 `indices` | [`d`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/hasIndices) | Generate indices.
 `first` | opposite of [`g`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) | VRE does global search by default. This flag disables global search.
 `ignoreCase` | [`i`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) | Case-insensitive.
-`unicode` | [`u`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) | Unicode code points.
+`legacy` | opposite of [`u`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) | VRE support unicode surrogate pairs by default. This flag brings up old behavior which interprets surrogate pair as two separate characters and also disables `\u{}` and `\p{}`.
+`unicode` | [`v`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicodeSets) | Upgraded unicode (v-mode).
 `sticky` | [`y`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) | Sticky search.
 `cache` | | Use VRE cache, see below.
 
 You may notice that some RegExp flags are not listed above.
 The `m` and `s` flags are handled automatically by the VRE and you don't need to know
-about their status. The `v` flag is not implemented yet.
+about their status.
+
+> [!NOTE]
+> The `unicode` (`v` in RegExp) flag is a recent addition to JavaScript's regular expressions,
+> so it may not be available on some older platforms.
 
 ## Cache
 
@@ -379,7 +384,7 @@ There is a slide difference between interpolating VRE expression and a string:
 
 * Interpolated VRE expression becomes an atom, so, for example, adding `repeat`
   quantifier will affect entire interpolated expression.
-  The `ignoreCase` and `unicode` flags must be the same in both
+  The `ignoreCase`, `unicode` and `legacy` flags must be the same in both
   expressions. JavaScript does not allow to change RegExp flags in the middle of
   the expression.
 * Interpolated string is simply placed token by token, so, for example,

@@ -16,12 +16,19 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
+
 // #region Utilities
 
 
+/**
+ * A string containing characters used for generating unique prefixes.
+ */
 let prefixGenChars = 'QVRZJQXVKRLADFFXZCQEIKOKJPIXJXKOMJXMYCAHDJZUFTGFMIVPCPLPNNVNCTPVXUXXNTLGVPPQOOHVFMJDZFWQYECCNYFL';
 
 
+/**
+ * Generates a prefix (started with the "`" character) of the specified length.
+ */
 function generatePrefix(length: number): string {
     while (2 * length > prefixGenChars.length) {
         prefixGenChars = prefixGenChars.repeat(2);
@@ -30,6 +37,10 @@ function generatePrefix(length: number): string {
 }
 
 
+/**
+ * Generates a unique prefix (started with the "`" character) that does not appear in the provided array.
+ * The prefix starts with a length of 3 and increases if necessary to ensure uniqueness.
+ */
 function generatePrefixForText(text: readonly string[]): string {
     let prefix = generatePrefix(3);
     while (text.some(x => x.indexOf(prefix) >= 0)) {
@@ -38,14 +49,22 @@ function generatePrefixForText(text: readonly string[]): string {
     return prefix;
 }
 
-
+/**
+ * Escapes special characters in a string to be used within a regular expression.
+ */
 function escapeRegExp(text: string) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 
-function escapeCharacterClass(text: string) {
-    return text.replace(/[\\\]^-]/g, '\\$&');
+/**
+ * Escapes special characters in a string to be used within a character class of a regular expression.
+ * A "vmode" flag indicates the escape mode for "v" flag enabled.
+ */
+function escapeCharacterClass(text: string, vmode: boolean) {
+    return vmode
+        ? text.replace(/(?:[[\\\](){}/|^-]|&&|!!|##|\$\$|%%|\*\*|\+\+|,,|\.\.|::|;;|<<|==|>>|\?\?|@@|\^\^|``|~~)/g, '\\$&')
+        : text.replace(/[\\\]^-]/g, '\\$&');
 }
 
 
@@ -55,6 +74,10 @@ function escapeCharacterClass(text: string) {
 // #region Exceptions
 
 
+/**
+ * The class extends the native JavaScript `Error` class to provide
+ * error handling specifically for syntax and logic errors in the Verbose Regular Expressions.
+ */
 export class VREError extends Error { };
 
 
@@ -68,47 +91,91 @@ class TokenizerError extends Error {
 // #endregion
 
 
+// #region Generated Regular Expressions
+
+
+const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)(?=[\r\n\u2028\u2029]|$))\s*/sy;
+
+const tokenRegExpVMode = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|(?<characterClassVMode>\[)(?<complement>\^)?|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)(?=[\r\n\u2028\u2029]|$))\s*/sy;
+
+const quantifierRegExp = /^(?<lazy>lazy-|non-greeny-)?(?:(?<optional>optional)|(?<repeat>repeat)|(?:repeat-)?(?:(?:at-)?(?:(?<least>least-)|(?<most>most-))(?<count>\d+)|(?<min>\d+)(?:-to-(?<max>\d+))?)(?:-times?)?)$/su;
+
+
+// #endregion
+
+
 // #region Tokenizer
 
 
+/**
+ * Regular expression flags. Meaning the same as in RegExp class with additional `cache` field that controls
+ * Verbose Regular Expression cache.
+ */
 interface Flags {
     multiline: boolean;
     indices: boolean;
     global: boolean;
     ignoreCase: boolean;
     unicode: boolean;
+    unicodeSets: boolean;
     sticky: boolean;
     cache: boolean;
 }
 
+/**
+ * Interface providing original source information. Used to provide detailed error messages with exact locations and
+ * malformed source.
+ */
 interface ExpressionSource {
     sourceCode: string;
     interpolationPrefix: string;
     flags: Flags;
 }
 
+/**
+ * Interface embedded to the RegExp object created from the Verbose Regular Expression that provides information
+ * needed to reuse the expression in a different one.
+ */
 interface ExpressionTokenized extends ExpressionSource {
     tokens: Token[];
 }
 
+/**
+ * Type of tokens
+ */
 enum TokenType {
+    /** String literal, e.g. `"abc"` */
     Literal,
+    /** Identifier, e.g. `<name>` */
     Identifier,
+    /** Label: e.g. `name:` */
     Label,
+    /** Keyword: e.g. `at-least-1` */
     Keyword,
+    /** Character class: e.g. `[^abc]` */
     CharacterClass,
+    /** Parentheses or braces begin: `(` or `{` */
     Begin,
+    /** Parentheses or braces end: `)` or `}` */
     End,
+    /** Internal token used to indicate beginning of the interpolation. */
     InterpolationBegin,
+    /** Internal token used to indicate end of the interpolation. */
     InterpolationEnd,
 }
 
+/**
+ * Token containing textual data.
+ */
 interface TextToken {
     type: TokenType.Literal | TokenType.Identifier | TokenType.Label | TokenType.Keyword;
     position: number;
     text: string;
 }
 
+/**
+ * Character class token.
+ */
 interface CharacterClassToken {
     type: TokenType.CharacterClass;
     position: number;
@@ -116,19 +183,31 @@ interface CharacterClassToken {
     complement: boolean;
 }
 
-interface EmptyToken {
-    type: TokenType.Begin | TokenType.End | TokenType.InterpolationEnd;
-    position: number;
-}
-
+/**
+ * Interpolation begin token. Provides information about the source of the interpolation.
+ */
 interface InterpolationBeginToken {
     type: TokenType.InterpolationBegin;
     position: number;
     source: ExpressionSource;
 }
 
+/**
+ * Token that does not provide additional data.
+ */
+interface EmptyToken {
+    type: TokenType.Begin | TokenType.End | TokenType.InterpolationEnd;
+    position: number;
+}
+
+/**
+ * Any token type.
+ */
 type Token = TextToken | CharacterClassToken | EmptyToken | InterpolationBeginToken;
 
+/**
+ * Groups defined in the `tokenRegExpBase` and `tokenRegExpVMode`.
+ */
 interface TokenRegExpGroups {
     begin?: string;
     end?: string;
@@ -137,6 +216,7 @@ interface TokenRegExpGroups {
     literal?: string;
     identifier?: string;
     characterClass?: string;
+    characterClassVMode?: string;
     complement?: string;
     prefix?: string;
     index?: string;
@@ -145,69 +225,124 @@ interface TokenRegExpGroups {
 }
 
 
-const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)\s*/msy;
+/**
+ * Returns index in the text where the character class ends in v-mode (with 'v' flag set).
+ */
+function matchVModeCharacterClass(text: string, index: number) {
+    let nested = 0;
+    let startIndex = index;
+    while (index < text.length) {
+        let ch = text[index];
+        if (ch === '[') {
+            nested++;
+        } else if (ch === ']') {
+            if (nested == 0) {
+                return index;
+            }
+            nested--;
+        } else if (ch === '\\') {
+            index++;
+            if (index === text.length) {
+                break;
+            }
+        }
+        index++;
+    }
+    throw new TokenizerError(startIndex, 'Unterminated character class.');
+}
 
 
-function tokenize(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[], flags: Flags): Token[] {
+/**
+ * Do text tokenization and values interpolation.
+ *
+ * @param text The text to tokenize. It contains interpolation placeholders that are concatenation of:
+ *             prefix, interpolated value index, the `}` character.
+ * @param interpolationPrefix A prefix for interpolation placeholders.
+ * @param values Interpolation values.
+ * @param flags Regular expression flags.
+ * @returns Array of tokens.
+ */
+function tokenize(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[],
+    flags: Flags): Token[] {
+
     let result: Token[] = [];
-    let tokenRegex = new RegExp(tokenRegExpBase);
+    let tokenRegex = new RegExp(flags.unicodeSets ? tokenRegExpVMode : tokenRegExpBase);
     let groups: TokenRegExpGroups | undefined;
     let position = 0;
-    let prefixReplace: RegExp | undefined = undefined;
+    let prefixReplace: RegExp = new RegExp(interpolationPrefix + '([0-9]+)\\}', 'g');
+
     while ((groups = tokenRegex.exec(text)?.groups)) {
         if (groups.begin !== undefined) {
+            // Parentheses or braces begin.
             result.push({ position, type: TokenType.Begin });
         } else if (groups.end !== undefined) {
+            // Parentheses or braces end.
             result.push({ position, type: TokenType.End });
         } else if (groups.label !== undefined) {
+            // Label (capturing group begin).
             result.push({ position, type: TokenType.Label, text: groups.label });
         } else if (groups.keyword !== undefined) {
+            // Keyword.
             result.push({
                 position,
                 type: TokenType.Keyword,
                 text: groups.keyword.toLowerCase().replace(/\u2011/g, '-'),
             });
         } else if (groups.literal !== undefined) {
+            // Literal string (can contains interpolation).
             let content = groups.literal;
+            // Replace interpolation placeholders.
             if (content.indexOf(interpolationPrefix) >= 0) {
-                if (prefixReplace === undefined) {
-                    prefixReplace = new RegExp(interpolationPrefix + '([0-9]+)\\}', 'g');
-                }
                 content = content.replace(prefixReplace, (_, index) => {
+                    // Fetch interpolation value that can only be string.
                     let value = values[parseInt(index)];
                     if (typeof value !== 'string') {
                         throw new TokenizerError(position, 'Cannot interpolate expression to a string literal.');
                     }
+                    // Replace with escaped string (using JSON).
                     let result = JSON.stringify(value);
-                    result = result.substring(1, result.length - 1);
-                    return result;
+                    return result.substring(1, result.length - 1);
                 });
             }
+            // Evaluate string literal as JavaScript expression.
             try {
                 result.push({ position, type: TokenType.Literal, text: (new Function(`return ${content};`))() });
             } catch (ex) {
                 throw new TokenizerError(position, 'Error parsing string literal.');
             }
         } else if (groups.identifier !== undefined) {
+            // Identifier.
             result.push({ position, type: TokenType.Identifier, text: groups.identifier });
-        } else if (groups.characterClass !== undefined) {
-            let content = groups.characterClass;
+        } else if (groups.characterClass !== undefined || groups.characterClassVMode !== undefined) {
+            // Character class.
+            let content: string;
+            if (groups.characterClass !== undefined) {
+                // Simple character class.
+                content = groups.characterClass;
+            } else {
+                // V-mode class cannot be parsed by regular expression at once, so step by step method is needed.
+                let matchingEnd = matchVModeCharacterClass(text, tokenRegex.lastIndex);
+                content = text.substring(tokenRegex.lastIndex, matchingEnd);
+                tokenRegex.lastIndex = matchingEnd + 1;
+            }
+            // Replace interpolation placeholders.
             if (content.indexOf(interpolationPrefix) >= 0) {
-                if (prefixReplace === undefined) {
-                    prefixReplace = new RegExp(interpolationPrefix + '([0-9]+)\\}', 'g');
-                }
                 content = content.replace(prefixReplace, (_, index) => {
+                    // Fetch interpolation value that can only be string.
                     let value = values[parseInt(index)];
                     if (typeof value !== 'string') {
                         throw new TokenizerError(position, 'Cannot interpolate expression to a character class.');
                     }
-                    return escapeCharacterClass(value);
+                    // Replace with escaped string.
+                    return escapeCharacterClass(value, flags.unicodeSets);
                 });
             }
             result.push({ position, type: TokenType.CharacterClass, text: content, complement: !!groups.complement });
         } else if (groups.prefix === interpolationPrefix) {
+            // Placeholder - another expression interpolated directly here.
             let value = values[parseInt(groups.index as string)];
             if (typeof value === 'string') {
+                // String expression - tokenize it and put into current result.
                 let innerPrefix = generatePrefixForText([value]);
                 result.push({
                     position,
@@ -217,15 +352,21 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
                 result = result.concat(tokenize(value, innerPrefix, [], flags));
                 result.push({ position, type: TokenType.InterpolationEnd });
             } else {
+                // Verbose Regular Expression, first check if significant flags are the same.
                 if (flags.ignoreCase !== value.flags.ignoreCase) {
-                    throw new TokenizerError(position, `Mismatching "ignore-case" flag in interpolated expression. ` +
+                    throw new TokenizerError(position, `Mismatching "ignoreCase" flag in interpolated expression. ` +
                         `Outer expression: "${flags.ignoreCase ? 'set' : 'unset'}", ` +
                         `interpolated expression: "${value.flags.ignoreCase ? 'set' : 'unset'}".`);
                 } else if (flags.unicode !== value.flags.unicode) {
+                    throw new TokenizerError(position, `Mismatching "legacy" flag in interpolated expression. ` +
+                        `Outer expression: "${flags.unicode ? 'unset' : 'set'}", ` +
+                        `interpolated expression: "${value.flags.unicode ? 'unset' : 'set'}".`);
+                } else if (flags.unicodeSets !== value.flags.unicodeSets) {
                     throw new TokenizerError(position, `Mismatching "unicode" flag in interpolated expression. ` +
-                        `Outer expression: "${flags.unicode ? 'set' : 'unset'}", ` +
-                        `interpolated expression: "${value.flags.unicode ? 'set' : 'unset'}".`);
+                        `Outer expression: "${flags.unicodeSets ? 'set' : 'unset'}", ` +
+                        `interpolated expression: "${value.flags.unicodeSets ? 'set' : 'unset'}".`);
                 }
+                // Place tokens from the source expression and enclose in parentheses.
                 result.push({ position, type: TokenType.Begin });
                 result.push({ position, type: TokenType.InterpolationBegin, source: value });
                 result = result.concat(value.tokens);
@@ -233,8 +374,9 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
                 result.push({ position, type: TokenType.End });
             }
         } else if (groups.comment1 !== undefined || groups.comment2 !== undefined) {
-            // skip comments
+            // Comments - skip them.
         } else {
+            // Any other case is an error.
             break;
         }
         position = tokenRegex.lastIndex;
@@ -389,7 +531,7 @@ class List extends Node {
 
     public generate(): string {
         return this.items.map(item => {
-            if (item instanceof OrExpression) {
+            if (item instanceof OrOperator) {
                 return item.generateAtom();
             } else {
                 return item.generate();
@@ -399,7 +541,7 @@ class List extends Node {
 }
 
 
-class OrExpression extends Node {
+class OrOperator extends Node {
 
     public constructor(
         public items: Node[]
@@ -467,6 +609,7 @@ class CharacterClassEscape extends InvertibleNode {
 class CharacterClassSingle extends InvertibleNode {
 
     private unescapedText!: string;
+    private vmode!: boolean;
 
     private static keywords: { [keyword: string]: string } = {
         '\\n': '\n', 'nl': '\n', 'new-line': '\n', 'lf': '\n', 'line-feed': '\n',
@@ -483,19 +626,22 @@ class CharacterClassSingle extends InvertibleNode {
             || (ctx.info.flags.unicode && token.text.length === 2 && /[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(token.text)))) {
             obj = new CharacterClassSingle(false);
             obj.unescapedText = token.text;
+            obj.vmode = ctx.info.flags.unicodeSets;
         } else if (token.type === TokenType.Keyword && this.keywords[token.text]) {
             obj = new CharacterClassSingle(false);
             obj.unescapedText = this.keywords[token.text];
+            obj.vmode = ctx.info.flags.unicodeSets;
         } else if (token.type === TokenType.CharacterClass && token.text.length === 1) {
             obj = new CharacterClassSingle(token.complement);
             obj.unescapedText = token.text;
+            obj.vmode = ctx.info.flags.unicodeSets;
         }
         return obj;
     }
 
     public generateAtom(): string {
         if (this.negative) {
-            return `[^${escapeCharacterClass(this.unescapedText)}]`;
+            return `[^${escapeCharacterClass(this.unescapedText, this.vmode)}]`;
         } else {
             return escapeRegExp(this.unescapedText);
         }
@@ -756,8 +902,6 @@ interface QuantifierRegExpGroups {
     max?: string;
 }
 
-const quantifierRegExp = /^(?<lazy>lazy-|non-greeny-)?(?:(?<optional>optional)|(?<repeat>repeat)|(?:repeat-)?(?:(?:at-)?(?:(?<least>least-)|(?<most>most-))(?<count>\d+)|(?<min>\d+)(?:-to-(?<max>\d+))?)(?:-times?)?)$/s;
-
 
 class Quantifier extends Node {
 
@@ -839,18 +983,18 @@ function parseOr(ctx: Context): Node {
     }
     ctx.read();
     let right = parseOr(ctx);
-    if (left instanceof OrExpression) {
-        if (right instanceof OrExpression) {
+    if (left instanceof OrOperator) {
+        if (right instanceof OrOperator) {
             left.items.push(...right.items);
         } else {
             left.items.push(right);
         }
         return left;
-    } else if (right instanceof OrExpression) {
+    } else if (right instanceof OrOperator) {
         right.items.unshift(left);
         return right;
     } else {
-        return new OrExpression([left, right]);
+        return new OrOperator([left, right]);
     }
 }
 
@@ -950,7 +1094,8 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
             indices: false,
             global: true,
             ignoreCase: false,
-            unicode: false,
+            unicode: true,
+            unicodeSets: false,
             sticky: false,
             cache: false,
             ...flags,
@@ -974,9 +1119,18 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
     if (ctx.info.flags.global) regexpFlags += 'g';
     if (ctx.info.flags.ignoreCase) regexpFlags += 'i';
     if (ctx.info.flags.multiline) regexpFlags += 'm';
-    if (ctx.info.flags.unicode) regexpFlags += 'u';
     if (ctx.info.flags.sticky) regexpFlags += 'y';
-    // TODO: implement v flag: if (ctx.flags.unicodeSets) regexpFlags += 'v';
+    if (ctx.info.flags.unicodeSets) {
+        if (ctx.info.flags.unicode) {
+            regexpFlags += 'v';
+        } else {
+            throw ctx.error(undefined, 'You cannot mix "legacy" and "unicode" flags.');
+        }
+    } else {
+        if (ctx.info.flags.unicode) {
+            regexpFlags += 'u';
+        }
+    }
 
     let result = new RegExp(pattern, regexpFlags);
     Object.defineProperty(result, verboseRegExpInfo, {
@@ -1003,7 +1157,7 @@ let cacheExpIdLast = 1;
 const proxyCache: { [key: string]: typeof vre } = {};
 
 
-function vreImpl(flags: Partial<Flags>, str: TemplateStringsArray, ...values: any[]) {
+function vreImpl(flags: Partial<Flags>, str: TemplateStringsArray, ...values: any[]): RegExp {
     try {
         let raw = str.raw;
         let prefix = generatePrefixForText(raw);
@@ -1085,27 +1239,34 @@ const proxyHandler = {
             case 'indices': update = { indices: true }; break;
             case 'first': update = { global: false }; break;
             case 'ignoreCase': update = { ignoreCase: true }; break;
-            case 'unicode': update = { unicode: true }; break;
+            case 'legacy': update = { unicode: false }; break;
+            case 'unicode': update = { unicodeSets: true }; break;
             case 'sticky': update = { sticky: true }; break;
             case 'cache': update = { cache: true }; break;
         };
-        let newObj = {...obj, ...update, _id: id};
+        let newObj = { ...obj, ...update, _id: id };
         proxyCache[id] = (new Proxy(() => newObj, proxyHandler) as any);
         return proxyCache[id];
     }
 };
 
 
-export default function vre(str: TemplateStringsArray, ...values: any[]) {
+/**
+ * The function is a tagged template literal function that produces RegExp object from
+ * the Verbose Regular Expression.
+ */
+export default function vre(str: TemplateStringsArray, ...values: any[]): RegExp {
     return vreImpl({}, str, ...values);
 }
 
 
 vre.indices = new Proxy(() => ({ _id: 'indices', indices: true }), proxyHandler) as typeof vre;
-vre.first = new Proxy(() => ({ _id: 'global', global: false }), proxyHandler) as typeof vre;
+vre.first = new Proxy(() => ({ _id: 'first', global: false }), proxyHandler) as typeof vre;
 vre.ignoreCase = new Proxy(() => ({ _id: 'ignoreCase', ignoreCase: true }), proxyHandler) as typeof vre;
-vre.unicode = new Proxy(() => ({ _id: 'unicode', unicode: true }), proxyHandler) as typeof vre;
+vre.legacy = new Proxy(() => ({ _id: 'legacy', unicode: false }), proxyHandler) as typeof vre;
+vre.unicode = new Proxy(() => ({ _id: 'unicode', unicodeSets: true }), proxyHandler) as typeof vre;
 vre.sticky = new Proxy(() => ({ _id: 'sticky', sticky: true }), proxyHandler) as typeof vre;
 vre.cache = new Proxy(() => ({ _id: 'cache', cache: true }), proxyHandler) as typeof vre;
+
 
 // #endregion
