@@ -526,9 +526,10 @@ class CharacterClassSingle extends InvertibleNode {
         'nbsp': '\xA0',
     };
 
-    public static create(token: Token) {
+    public static create(token: Token, ctx: Context) {
         let obj: CharacterClassSingle | undefined = undefined;
-        if (token.type === TokenType.Literal && token.text.length === 1) { // TODO: Support unicode surrogate pairs
+        if (token.type === TokenType.Literal && (token.text.length === 1
+            || (ctx.flags.unicode && token.text.length === 2 && /[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(token.text)))) {
             obj = new CharacterClassSingle(false);
             obj.unescapedText = token.text;
         } else if (token.type === TokenType.Keyword && this.keywords[token.text]) {
@@ -601,6 +602,9 @@ class CharacterClassProperty extends InvertibleNode {
     public static create(token: Token, ctx: Context) {
         let obj: CharacterClassProperty | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'prop' || token.text === 'property')) {
+            if (!ctx.flags.unicode) {
+                throw new VREError('Property requires <UNICODE> flag.');
+            }
             obj = new CharacterClassProperty(false);
             let id = ctx.read();
             if (id?.type !== TokenType.Identifier) {
@@ -959,7 +963,7 @@ function parseLeaf(ctx: Context): Node {
         }
     } else {
         node = CharacterClassEscape.create(token)
-            || CharacterClassSingle.create(token)
+            || CharacterClassSingle.create(token, ctx)
             || CharacterClassAny.create(token)
             || CharacterClassRange.create(token)
             || CharacterClassProperty.create(token, ctx)
