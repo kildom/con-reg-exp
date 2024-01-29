@@ -29,24 +29,23 @@ Otherwise, you can put there anything without worring about escaping.
 
 ## Flags
 
-The VRE starts with the flags. Flags are enclosed in `<` and `>`.
-The VRE flags and RegExp flags are not all the same. For example:
+After the `vre` tag, you can specify one or more flags.
+The flags and tag are separated with a dot `.`.
+The VRE flags and RegExp flags are not the same.
+For example:
 
 ```javascript
-let items = input.split(vre`<IGNORE-CASE> "and"`);
+let items = input.split(vre.ignoreCase.unicode`"and"`);
 ```
 
 Flag name | RegExp equivalent | Description
 ----|----|----
-`<INDICES>` | [`d`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/hasIndices) | Generate indices.
-`<FIRST>` | opposite of [`g`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) | VRE does global search by default. This flag disables global search.
-`<IGNORE‑CASE>` | [`i`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) | Case-insensitive. Alias: `<CASE‑INSENSITIVE>`.
-`<UNICODE>` | [`u`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) | Unicode code points.
-`<STICKY>` | [`y`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) | Sticky search.
-`<CACHE>` | | Use VRE cache, see below.
-
-The flag names are case-insensitive, but it's better to use uppercase,
-since they are significantly affecting the rest of the expression.
+`indices` | [`d`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/hasIndices) | Generate indices.
+`first` | opposite of [`g`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) | VRE does global search by default. This flag disables global search.
+`ignoreCase` | [`i`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) | Case-insensitive.
+`unicode` | [`u`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) | Unicode code points.
+`sticky` | [`y`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) | Sticky search.
+`cache` | | Use VRE cache, see below.
 
 You may notice that some RegExp flags are not listed above.
 The `m` and `s` flags are handled automatically by the VRE and you don't need to know
@@ -56,11 +55,11 @@ about their status. The `v` flag is not implemented yet.
 
 The regular expression can be cached, so once it get translated
 into RegExp, the VRE will return copy of same object for the same
-input string and interpolated values. It is done using `<CACHE>` flag that must be the
-first flag in the expression, for example:
+input string and interpolated values. It is done using `cache` flag that must be the,
+for example:
 
 ```javascript
-let match = input.match(vre`<CACHE> repeat digit`);
+let match = input.match(vre.cache`repeat digit`);
 ```
 
 If high performance is your goal, better solution would be to put the expression
@@ -82,7 +81,7 @@ You have to escape backticks `` ` `` and interpolation begin sequence `${`.
 For example:
 
 ```javascript
-let containsWarning = vre`<IGNORE-CASE> "warning"`.test(input);
+let containsWarning = vre.ignoreCase`"warning"`.test(input);
 let numberOfLines = input.match(vre`"\n"`).length + 1;
 let hasBacktick = vre`"\`"`.test(input);
 ```
@@ -177,7 +176,7 @@ Keyword | RegExp equivalent | Description | Aliases
 For example:
 
 ```javascript
-let isJPEG = vre`<IGNORE-CASE> (".jpeg" or ".jpg") end-of-text`.test(fileName);
+let isJPEG = vre.ignoreCase`(".jpeg" or ".jpg") end-of-text`.test(fileName);
 ```
 
 Boundary assertion can be complemented with the `not` operator, for example:
@@ -212,6 +211,8 @@ let onlyDigits = input.replace(vre`not digit`, '');
 ## Unicode Property
 
 Character class that matches specific unicode property uses `property` (alias `prop`) keyword followed by actual property enclosed in `< >`.
+
+This only works if the `unicode` property is set.
 
 ```javascript
 let hasNonEnglishLetters = vre`lookahead not [A-Z] prop<Letter>`.test(input);
@@ -333,7 +334,7 @@ escape it before using, the VRE will handle that for you.
 
 ```javascript
 function hasVerbInAnyForm(text, verb) {
-    return vre`<IGNORE-CASE>
+    return vre.ignoreCase`
         word-boundary
         {
             "${verb}" or "${verb}s" or "${verb}es"
@@ -359,7 +360,7 @@ you must specify each character in the interpolated string - `abcdef`.
 ```javascript
 function isInteger(text, isHex) {
     const additionalCharacters = isHex ? "abcdef" : "";
-    return vre`<IGNORE-CASE>
+    return vre.ignoreCase`
         start-of-text
         at-least-1 [0-9${additionalCharacters}]
         end-of-text
@@ -378,13 +379,12 @@ There is a slide difference between interpolating VRE expression and a string:
 
 * Interpolated VRE expression becomes an atom, so, for example, adding `repeat`
   quantifier will affect entire interpolated expression.
+  The `ignoreCase` and `unicode` flags must be the same in both
+  expressions. JavaScript does not allow to change RegExp flags in the middle of
+  the expression.
 * Interpolated string is simply placed token by token, so, for example,
   adding `repeat` quantifier will affect only the first atom in
   the interpolated expression.
-
-In both cases `<IGNORE-CASE>` and `<UNICODE>` flags must be the same in both
-expressions. JavaScript does not allow to change RegExp flags in the middle of
-the expression.
 
 ```javascript
 const number = vre`
@@ -405,7 +405,7 @@ const number = vre`
 const ws = vre`repeat whitespace`;
 
 function validateJSONArrayOfNumbers(text) {
-    return vre`<CACHE> <FIRST>
+    return vre.cache.first`
         begin-of-text ${ws}   // Trim leading whitespaces
         "[" ${ws}             // Begin of array
         optional {            // Array can be empty
@@ -440,7 +440,7 @@ function validateJSONArrayOfNumbers(text) {
 ```javascript
 function validateWord(text, allowEmpty) {
     let quantifier = allowEmpty ? 'repeat' : 'at-least-1';
-    return vre`<CACHE>
+    return vre.cache`
         begin-of-text
         ${quantifier} word-character
         end-of-text

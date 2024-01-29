@@ -71,9 +71,20 @@ class TokenizerError extends Error {
 // #region Tokenizer
 
 
+interface Flags {
+    multiline: boolean;
+    indices: boolean;
+    global: boolean;
+    ignoreCase: boolean;
+    unicode: boolean;
+    sticky: boolean;
+    cache: boolean;
+}
+
 interface ExpressionSource {
     sourceCode: string;
     interpolationPrefix: string;
+    flags: Flags;
 }
 
 interface ExpressionTokenized extends ExpressionSource {
@@ -137,7 +148,7 @@ interface TokenRegExpGroups {
 const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)\s*/msy;
 
 
-function tokenize(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[]): Token[] {
+function tokenize(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[], flags: Flags): Token[] {
     let result: Token[] = [];
     let tokenRegex = new RegExp(tokenRegExpBase);
     let groups: TokenRegExpGroups | undefined;
@@ -201,11 +212,20 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
                 result.push({
                     position,
                     type: TokenType.InterpolationBegin,
-                    source: { sourceCode: value, interpolationPrefix: innerPrefix },
+                    source: { sourceCode: value, interpolationPrefix: innerPrefix, flags },
                 });
-                result = result.concat(tokenize(value, innerPrefix, []));
+                result = result.concat(tokenize(value, innerPrefix, [], flags));
                 result.push({ position, type: TokenType.InterpolationEnd });
             } else {
+                if (flags.ignoreCase !== value.flags.ignoreCase) {
+                    throw new TokenizerError(position, `Mismatching "ignore-case" flag in interpolated expression. ` +
+                        `Outer expression: "${flags.ignoreCase ? 'set' : 'unset'}", ` +
+                        `interpolated expression: "${value.flags.ignoreCase ? 'set' : 'unset'}".`);
+                } else if (flags.unicode !== value.flags.unicode) {
+                    throw new TokenizerError(position, `Mismatching "unicode" flag in interpolated expression. ` +
+                        `Outer expression: "${flags.unicode ? 'set' : 'unset'}", ` +
+                        `interpolated expression: "${value.flags.unicode ? 'set' : 'unset'}".`);
+                }
                 result.push({ position, type: TokenType.Begin });
                 result.push({ position, type: TokenType.InterpolationBegin, source: value });
                 result = result.concat(value.tokens);
@@ -231,20 +251,7 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
 // #region Parser Context
 
 
-interface Flags {
-    multiline: boolean;
-    indices: boolean;
-    global: boolean;
-    ignoreCase: boolean;
-    unicode: boolean;
-    sticky: boolean;
-    cache: boolean;
-}
-
-
 class Context {
-
-    public flags: Flags;
 
     private index: number;
     private interpolationStack: InterpolationBeginToken[] = [];
@@ -253,7 +260,6 @@ class Context {
         public info: ExpressionTokenized,
     ) {
         this.index = 0;
-        this.flags = this.getFlags();
         this.processInterpolation();
     }
 
@@ -343,16 +349,6 @@ class Context {
             if (token?.type === TokenType.InterpolationBegin) {
                 this.index++;
                 this.interpolationStack.push(token);
-                let innerFlags = this.getFlags();
-                if (this.flags.ignoreCase !== innerFlags.ignoreCase) {
-                    throw this.error(token, `Mismatching "ignore-case" flag in interpolated expression. ` +
-                        `Outer expression: "${this.flags.ignoreCase ? 'set' : 'unset'}", ` +
-                        `interpolated expression: "${innerFlags.ignoreCase ? 'set' : 'unset'}".`);
-                } else if (this.flags.unicode !== innerFlags.unicode) {
-                    throw this.error(token, `Mismatching "unicode" flag in interpolated expression. ` +
-                        `Outer expression: "${this.flags.unicode ? 'set' : 'unset'}", ` +
-                        `interpolated expression: "${innerFlags.unicode ? 'set' : 'unset'}".`);
-                }
             } else if (token?.type === TokenType.InterpolationEnd) {
                 this.index++;
                 this.interpolationStack.pop();
@@ -360,51 +356,6 @@ class Context {
                 break;
             }
         } while (true);
-    }
-
-    private getFlags() {
-        let flags = {
-            multiline: true,
-            indices: false,
-            global: true,
-            ignoreCase: false,
-            unicode: false,
-            sticky: false,
-            cache: false,
-        };
-        while (this.info.tokens[this.index]?.type === TokenType.Identifier) {
-            let flagToken = this.info.tokens[this.index++] as TextToken;
-            let flagItems = flagToken.text.split(/[\s,;]+/);
-            for (let flag of flagItems) {
-                switch (flag.toLowerCase()) {
-                    case '':
-                        // ignore
-                        break;
-                    case 'indices':
-                        flags.indices = true;
-                        break;
-                    case 'first':
-                        flags.global = false;
-                        break;
-                    case 'ignore-case':
-                    case 'case-insensitive':
-                        flags.ignoreCase = true;
-                        break;
-                    case 'unicode':
-                        flags.unicode = true;
-                        break;
-                    case 'sticky':
-                        flags.sticky = true;
-                        break;
-                    case 'cache':
-                        flags.cache = true;
-                        break;
-                    default:
-                        throw this.error(flagToken, `Unknown flag "${flag}".`);
-                }
-            }
-        }
-        return flags;
     }
 }
 
@@ -529,7 +480,7 @@ class CharacterClassSingle extends InvertibleNode {
     public static create(token: Token, ctx: Context) {
         let obj: CharacterClassSingle | undefined = undefined;
         if (token.type === TokenType.Literal && (token.text.length === 1
-            || (ctx.flags.unicode && token.text.length === 2 && /[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(token.text)))) {
+            || (ctx.info.flags.unicode && token.text.length === 2 && /[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(token.text)))) {
             obj = new CharacterClassSingle(false);
             obj.unescapedText = token.text;
         } else if (token.type === TokenType.Keyword && this.keywords[token.text]) {
@@ -602,7 +553,7 @@ class CharacterClassProperty extends InvertibleNode {
     public static create(token: Token, ctx: Context) {
         let obj: CharacterClassProperty | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'prop' || token.text === 'property')) {
-            if (!ctx.flags.unicode) {
+            if (!ctx.info.flags.unicode) {
                 throw new VREError('Property requires <UNICODE> flag.');
             }
             obj = new CharacterClassProperty(false);
@@ -695,7 +646,7 @@ class LineBoundary extends InvertibleNode {
         ) {
             obj = new LineBoundary(false);
             obj.start = (token.text !== 'end-of-line');
-            obj.flags = ctx.flags;
+            obj.flags = ctx.info.flags;
         }
         return obj;
     }
@@ -725,7 +676,7 @@ class TextBoundary extends InvertibleNode {
         ) {
             obj = new TextBoundary(false);
             obj.start = (token.text !== 'end-of-text');
-            ctx.flags.multiline = false;
+            ctx.info.flags.multiline = false;
         }
         return obj;
     }
@@ -987,16 +938,26 @@ function parseLeaf(ctx: Context): Node {
 
 
 function parse(text: string, interpolationPrefix: string, values: (string | ExpressionTokenized)[],
-    useCache: boolean): RegExp {
+    flags: Partial<Flags>): RegExp {
 
     let ctx: Context;
     let expressionInfo: ExpressionTokenized = {
         interpolationPrefix: interpolationPrefix,
         sourceCode: text,
         tokens: [],
+        flags: {
+            multiline: true,
+            indices: false,
+            global: true,
+            ignoreCase: false,
+            unicode: false,
+            sticky: false,
+            cache: false,
+            ...flags,
+        }
     };
     try {
-        expressionInfo.tokens = tokenize(text, interpolationPrefix, values);
+        expressionInfo.tokens = tokenize(text, interpolationPrefix, values, expressionInfo.flags);
         ctx = new Context(expressionInfo);
     } catch (err) {
         if (err instanceof TokenizerError) {
@@ -1008,19 +969,16 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
 
     let expr = parseOr(ctx);
     let pattern = expr.generate();
-    let flags = 's';
-    if (ctx.flags.indices) flags += 'd';
-    if (ctx.flags.global) flags += 'g';
-    if (ctx.flags.ignoreCase) flags += 'i';
-    if (ctx.flags.multiline) flags += 'm';
-    if (ctx.flags.unicode) flags += 'u';
-    // TODO: implement v flag: if (ctx.flags.unicodeSets) flags += 'v';
-    if (ctx.flags.sticky) flags += 'y';
-    if (ctx.flags.cache && !useCache) {
-        throw ctx.error(ctx.info.tokens[0], 'Cache flag must be the first.');
-    }
+    let regexpFlags = 's';
+    if (ctx.info.flags.indices) regexpFlags += 'd';
+    if (ctx.info.flags.global) regexpFlags += 'g';
+    if (ctx.info.flags.ignoreCase) regexpFlags += 'i';
+    if (ctx.info.flags.multiline) regexpFlags += 'm';
+    if (ctx.info.flags.unicode) regexpFlags += 'u';
+    if (ctx.info.flags.sticky) regexpFlags += 'y';
+    // TODO: implement v flag: if (ctx.flags.unicodeSets) regexpFlags += 'v';
 
-    let result = new RegExp(pattern, flags);
+    let result = new RegExp(pattern, regexpFlags);
     Object.defineProperty(result, verboseRegExpInfo, {
         configurable: false,
         enumerable: false,
@@ -1039,19 +997,19 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
 
 type CacheNode = Map<string | number, CacheNode | RegExp>;
 
-const cacheDetectionRegExp = /^\s*<CACHE>/i;
 const cache = new Map<string, CacheNode | RegExp>();
 const cacheExpId = new WeakMap<RegExp, number>();
 let cacheExpIdLast = 1;
+const proxyCache: { [key: string]: typeof vre } = {};
 
 
-export default function vre(str: TemplateStringsArray, ...values: any[]) {
+function vreImpl(flags: Partial<Flags>, str: TemplateStringsArray, ...values: any[]) {
     try {
         let raw = str.raw;
         let prefix = generatePrefixForText(raw);
         let input = raw[0];
         let valuesProcessed: (string | ExpressionTokenized)[] = [];
-        let cacheKeys: (string | number)[] | undefined = input.match(cacheDetectionRegExp) ? [] : undefined;
+        let cacheKeys: (string | number)[] | undefined = flags.cache ? [] : undefined;
 
         for (let i = 0; i < values.length; i++) {
             let value = values[i];
@@ -1085,7 +1043,7 @@ export default function vre(str: TemplateStringsArray, ...values: any[]) {
             }
         }
 
-        let result = parse(input, prefix, valuesProcessed, !!cacheKeys);
+        let result = parse(input, prefix, valuesProcessed, flags);
 
         if (cacheKeys) {
             let cacheMap: CacheNode = cache;
@@ -1112,5 +1070,42 @@ export default function vre(str: TemplateStringsArray, ...values: any[]) {
     }
 }
 
+
+const proxyHandler = {
+    apply(target: object, thisArg: any, argumentsList: any[]) {
+        let obj = (target as any)();
+        return vreImpl(obj, ...(argumentsList as [TemplateStringsArray, string]));
+    },
+    get(target: object, prop: string) {
+        let obj = (target as any)();
+        let id = obj._id + prop;
+        if (id in proxyCache) return proxyCache[id];
+        let update: any;
+        switch (prop) {
+            case 'indices': update = { indices: true }; break;
+            case 'first': update = { global: false }; break;
+            case 'ignoreCase': update = { ignoreCase: true }; break;
+            case 'unicode': update = { unicode: true }; break;
+            case 'sticky': update = { sticky: true }; break;
+            case 'cache': update = { cache: true }; break;
+        };
+        let newObj = {...obj, ...update, _id: id};
+        proxyCache[id] = (new Proxy(() => newObj, proxyHandler) as any);
+        return proxyCache[id];
+    }
+};
+
+
+export default function vre(str: TemplateStringsArray, ...values: any[]) {
+    return vreImpl({}, str, ...values);
+}
+
+
+vre.indices = new Proxy(() => ({ _id: 'indices', indices: true }), proxyHandler) as typeof vre;
+vre.first = new Proxy(() => ({ _id: 'global', global: false }), proxyHandler) as typeof vre;
+vre.ignoreCase = new Proxy(() => ({ _id: 'ignoreCase', ignoreCase: true }), proxyHandler) as typeof vre;
+vre.unicode = new Proxy(() => ({ _id: 'unicode', unicode: true }), proxyHandler) as typeof vre;
+vre.sticky = new Proxy(() => ({ _id: 'sticky', sticky: true }), proxyHandler) as typeof vre;
+vre.cache = new Proxy(() => ({ _id: 'cache', cache: true }), proxyHandler) as typeof vre;
 
 // #endregion

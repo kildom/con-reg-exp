@@ -16,7 +16,7 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-import vre from './src/vre';
+import vre, { VREError } from '../src/vre';
 
 function eq(a: RegExp, b: RegExp) {
     let theSame = (a.source === b.source) && ([...a.flags].sort().join('') === [...b.flags].sort().join(''));
@@ -25,6 +25,17 @@ function eq(a: RegExp, b: RegExp) {
         console.error('Expected: ', b);
         throw new Error('Not equal!');
     }
+}
+
+function except(func: any) {
+    try {
+        func();
+    } catch (err) {
+        if (err instanceof VREError) return;
+        console.error('Error different than expected!');
+        throw err;
+    }
+    throw new Error('Expecting error');
 }
 
 // Assertions
@@ -49,10 +60,13 @@ eq(vre`not start-of-line`, /(?<!^)/gms);
 eq(vre`not begin-of-text not begin-of-line not end-of-line not end-of-text`, /(?<!^)(?<![\r\n\u2028\u2029]|^)(?![\r\n\u2028\u2029]|$)(?!$)/gs);
 eq(vre`not start-of-text not start-of-line`, /(?<!^)(?<![\r\n\u2028\u2029]|^)/gs);
 
-
-let abc = vre`"abc"`
-console.log(vre`<CACHE>${abc}`);
-console.log(vre`<CACHE>${abc}`);
-
 // Lookahead assertion: (?=...), (?!...)
 
+// Interpolation, mismatching flags
+
+except(() => {let abc = vre.ignoreCase`"abc"`; vre`${abc}`; });
+except(() => {let abc = vre`"abc"`; vre.ignoreCase`${abc}`; });
+except(() => {let abc = vre.unicode`"abc"`; vre`${abc}`; });
+except(() => {let abc = vre`"abc"`; vre.unicode`${abc}`; });
+except(() => {let abc = vre.ignoreCase.unicode`"abc"`; vre.unicode`${abc}`; });
+except(() => {let abc = vre.ignoreCase`"abc"`; vre.ignoreCase.unicode`${abc}`; });
