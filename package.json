@@ -1,16 +1,43 @@
 {
-  "name": "verboseregexp",
-  "version": "1.0.0",
-  "description": "",
-  "main": "parser.ts",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "name": "con-reg-exp",
+  "version": "0.1.0",
+  "description": "Convenient Regular Expressions - a different approach to the regular expressions syntax.",
+  "main": "./dist/cjs/con-reg-exp.cjs",
+  "module": "./dist/esm/con-reg-exp.mjs",
+  "types": "./dist/cjs/con-reg-exp.d.ts",
+  "exports": {
+    "types": "./dist/cjs/con-reg-exp.d.ts",
+    "require": "./dist/cjs/con-reg-exp.cjs",
+    "import": "./dist/esm/con-reg-exp.mjs"
   },
-  "author": "",
-  "license": "ISC",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
   "devDependencies": {
-    "@swc/core": "^1.3.105",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.3.3"
-  }
+    "esbuild": "^0.20.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npx tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json",
+    "postbuild": "npx ts-node --swc scripts/postbuild.ts",
+    "test-imports": "npx ts-node --swc test/test-imports/run-test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kildom/con-reg-exp.git"
+  },
+  "keywords": [
+    "regex"
+  ],
+  "author": "Dominik Kilian",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kildom/con-reg-exp/issues"
+  },
+  "homepage": "https://github.com/kildom/con-reg-exp#readme"
 }

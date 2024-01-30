@@ -4,3 +4,7 @@ node_modules
 !/draft.js
 /build/
 /node/
+/dist/
+/temp/
+/*.tgz
+/*.tar.gz

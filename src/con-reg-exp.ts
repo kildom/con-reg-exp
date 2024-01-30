@@ -78,7 +78,7 @@ function escapeCharacterClass(text: string, vmode: boolean) {
  * The class extends the native JavaScript `Error` class to provide
  * error handling specifically for syntax and logic errors in the Convenient Regular Expressions.
  */
-export class CREError extends Error { };
+class CREError extends Error { };
 
 
 class TokenizerError extends Error {
@@ -1267,6 +1267,11 @@ cre.legacy = new Proxy(() => ({ _id: 'legacy', unicode: false }), proxyHandler) 
 cre.unicode = new Proxy(() => ({ _id: 'unicode', unicodeSets: true }), proxyHandler) as typeof cre;
 cre.sticky = new Proxy(() => ({ _id: 'sticky', sticky: true }), proxyHandler) as typeof cre;
 cre.cache = new Proxy(() => ({ _id: 'cache', cache: true }), proxyHandler) as typeof cre;
+cre.Error = CREError;
 
+// Fix some module importing problems
+cre.default = cre;
+cre.cre = cre;
+export { cre };
 
 // #endregion

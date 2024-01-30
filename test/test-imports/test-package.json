@@ -1,0 +1,24 @@
+{
+    "name": "test-import",
+    "private": true,
+    "main": "./main.cjs",
+    "scripts": {
+        "test1": "node main.cjs",
+        "test2": "node main.mjs",
+        "test3": "npx ts-node main.ts",
+        "test4": "npx tsc main.ts && node main.js",
+        "test5": "npx esbuild main.mjs --bundle --outfile=main.mjs.esbuild.js && node main.mjs.esbuild.js",
+        "test6": "npx esbuild main.cjs --bundle --outfile=main.cjs.esbuild.js && node main.cjs.esbuild.js",
+        "test7": "npx webpack && node dist/main.webpack.js"
+    },
+    "dependencies": {
+        "con-reg-exp": "^0.0.1"
+    },
+    "devDependencies": {
+        "esbuild": "^0.20.0",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3",
+        "webpack": "^5.90.0",
+        "webpack-cli": "^5.1.4"
+    }
+}
