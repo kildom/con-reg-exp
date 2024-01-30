@@ -100,7 +100,7 @@ repeat whitespace
 
 console.log(`const quantifierRegExp = ${cre.first`
 begin-of-text
-optional lazy: ("lazy-" or "non-greeny-")
+optional lazy: ("lazy-" or "non-greedy-")
 {
     optional: "optional"
 or
