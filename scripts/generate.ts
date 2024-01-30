@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright 2024 Dominik Kilian
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
@@ -16,12 +16,12 @@
  * DEALINGS IN THE SOFTWARE.
 */
 
-import vre from '../src/vre';
+import cre from '../src/con-reg-exp';
 
 console.log('\n');
 
 
-console.log(`const tokenRegExpBase = ${vre.first.sticky.legacy`
+console.log(`const tokenRegExpBase = ${cre.first.sticky.legacy`
 begin-of-text
 repeat whitespace
 {
@@ -60,7 +60,7 @@ or
 repeat whitespace
 `};\n`);
 
-console.log(`const tokenRegExpVMode = ${vre.first.sticky.legacy`
+console.log(`const tokenRegExpVMode = ${cre.first.sticky.legacy`
 begin-of-text
 repeat whitespace
 {
@@ -98,7 +98,7 @@ repeat whitespace
 `};\n`);
 
 
-console.log(`const quantifierRegExp = ${vre.first`
+console.log(`const quantifierRegExp = ${cre.first`
 begin-of-text
 optional lazy: ("lazy-" or "non-greeny-")
 {
@@ -120,7 +120,7 @@ or
 end-of-text
 `};\n`);
 
-const number = vre`
+const number = cre`
     optional [+-]                   // Sign
     {
         at-least-1 digit            // Integral part
@@ -135,9 +135,9 @@ const number = vre`
     }
 `;
 
-const ws = vre`repeat whitespace`;
+const ws = cre`repeat whitespace`;
 
-console.log(vre.cache.first`
+console.log(cre.cache.first`
         begin-of-text ${ws}
         "[" ${ws}               // Begin of array
         optional {              // Array can be empty

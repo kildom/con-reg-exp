@@ -1,20 +1,20 @@
 
-# Verbose Regular Expressions Overview
+# Convenient Regular Expressions Overview
 
-This document explains how to use the **Verbose Regular Expressions** (VRE in short).
+This document explains how to use the **Convenient Regular Expressions** (***CRE*** in short).
 
 The examples shown here are kept simple.
-Looking at them, you may not see benefits of VRE,
-but true potential of VRE is really visible with longer and complex expressions.
+Looking at them, you may not see benefits of *CRE*,
+but true potential of *CRE* is really visible with longer and complex expressions.
 
 ## Embedding into JavaScript
 
-The VRE are written using the
+The *CRE* are written using the
 [tagged templates](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#tagged_templates).
-A tag name is **`vre`**. The VRE tagged template returns `RegExp` object.
+A tag name is **`cre`**. The *CRE* tagged template returns `RegExp` object.
 
 ```javascript
-let match = input.match(vre`repeat digit`);
+let match = input.match(cre`repeat digit`);
 ```
 
 The equivalent code using RegExp would be:
@@ -29,27 +29,27 @@ Otherwise, you can put there anything without worring about escaping.
 
 ## Flags
 
-After the `vre` tag, you can specify one or more flags.
+After the `cre` tag, you can specify one or more flags.
 The flags and tag are separated with a dot `.`.
-The VRE flags and RegExp flags are not the same.
+The *CRE* flags and RegExp flags are not the same.
 For example:
 
 ```javascript
-let items = input.split(vre.ignoreCase.unicode`"and"`);
+let items = input.split(cre.ignoreCase.unicode`"and"`);
 ```
 
 Flag name | RegExp<br/>equivalent | Description
 ----|----|----
 `indices` | [`d`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/hasIndices) | Generate indices.
-`first` | opposite of [`g`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) | VRE does global search by default. This flag disables global search.
+`first` | opposite of [`g`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) | *CRE* does global search by default. This flag disables global search.
 `ignoreCase` | [`i`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) | Case-insensitive.
-`legacy` | opposite of [`u`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) | VRE support unicode surrogate pairs by default. This flag brings up old behavior which interprets surrogate pair as two separate characters and also disables `\u{}` and `\p{}`.
+`legacy` | opposite of [`u`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) | *CRE* support unicode surrogate pairs by default. This flag brings up old behavior which interprets surrogate pair as two separate characters and also disables `\u{}` and `\p{}`.
 `unicode` | [`v`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicodeSets) | Upgraded unicode (v-mode).
 `sticky` | [`y`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) | Sticky search.
-`cache` | | Use VRE cache, see below.
+`cache` | | Use *CRE* cache, see below.
 
 You may notice that some RegExp flags are not listed above.
-The `m` and `s` flags are handled automatically by the VRE and you don't need to know
+The `m` and `s` flags are handled automatically by the *CRE* and you don't need to know
 about their status.
 
 > [!NOTE]
@@ -59,12 +59,12 @@ about their status.
 ## Cache
 
 The regular expression can be cached, so once it get translated
-into RegExp, the VRE will return copy of same object for the same
+into RegExp, the *CRE* will return copy of same object for the same
 input string and interpolated values. It is done using `cache` flag that must be the,
 for example:
 
 ```javascript
-let match = input.match(vre.cache`repeat digit`);
+let match = input.match(cre.cache`repeat digit`);
 ```
 
 If high performance is your goal, better solution would be to put the expression
@@ -77,7 +77,7 @@ in a variable just once and reuse it, for example in global `const`.
 
 ## Literal
 
-The basic node in VRE is a string literal.
+The basic node in *CRE* is a string literal.
 It simply matches the string.
 
 Its syntax is the same as JavaScript string literals with one exception.
@@ -86,9 +86,9 @@ You have to escape backticks `` ` `` and interpolation begin sequence `${`.
 For example:
 
 ```javascript
-let containsWarning = vre.ignoreCase`"warning"`.test(input);
-let numberOfLines = input.match(vre`"\n"`).length + 1;
-let hasBacktick = vre`"\`"`.test(input);
+let containsWarning = cre.ignoreCase`"warning"`.test(input);
+let numberOfLines = input.match(cre`"\n"`).length + 1;
+let hasBacktick = cre`"\`"`.test(input);
 ```
 
 ## Single character literals
@@ -108,21 +108,21 @@ Value | Keyword and aliases
 
 Character class matches one character in set of characters.
 
-Character class in VRE works the same as
+Character class in *CRE* works the same as
 [RegExp character class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Character_class) with one exception.
 You have to escape backticks `` ` `` and interpolation begin sequence `${`.
 
 For example:
 
 ```javascript
-let isNotHexString = vre`[^0-9a-fA-F]`.test(input);
+let isNotHexString = cre`[^0-9a-fA-F]`.test(input);
 ```
 
 Complement of character class can also be expressed using `not` keyword.
 The example above can be rewritten as follows:
 
 ```javascript
-let isNotHexString = vre`not [0-9a-fA-F]`.test(input);
+let isNotHexString = cre`not [0-9a-fA-F]`.test(input);
 ```
 
 ## Sequence
@@ -131,7 +131,7 @@ Literals, character classes, and also other nodes described below can be
 put next to each other to provide sequence of matches. For example:
 
 ```javascript
-let hasGrayInAnyForm = vre`"gr" [ae] "y"`.test(input);
+let hasGrayInAnyForm = cre`"gr" [ae] "y"`.test(input);
 ```
 
 ## `or` operator
@@ -143,7 +143,7 @@ alternative of them.
 The same example as above, but using `or`:
 
 ```javascript
-let hasGrayInAnyForm = vre`"gray" or "grey"`.test(input);
+let hasGrayInAnyForm = cre`"gray" or "grey"`.test(input);
 ```
 
 ## Parentheses `( )` and braces `{ }`
@@ -154,7 +154,7 @@ They controls the precedence of evaluation.
 The same example as above, but with parentheses `( )`:
 
 ```javascript
-let hasGrayInAnyForm = vre`"gr" ("a" or "e") "y"`.test(input);
+let hasGrayInAnyForm = cre`"gr" ("a" or "e") "y"`.test(input);
 ```
 
 In theory, you can exchange `( )` and `{ }` however you want,
@@ -181,13 +181,13 @@ Keyword | RegExp equivalent | Description | Aliases
 For example:
 
 ```javascript
-let isJPEG = vre.ignoreCase`(".jpeg" or ".jpg") end-of-text`.test(fileName);
+let isJPEG = cre.ignoreCase`(".jpeg" or ".jpg") end-of-text`.test(fileName);
 ```
 
 Boundary assertion can be complemented with the `not` operator, for example:
 
 ```javascript
-let tabInTheMiddleOfLine = vre`not begin-of-line "\t"`.test(fileName);
+let tabInTheMiddleOfLine = cre`not begin-of-line "\t"`.test(fileName);
 ```
 
 ## Character class keyword
@@ -204,13 +204,13 @@ Keyword | RegExp equivalent | Complement RegExp | Description | Aliases
 `line‑terminator` | `[\r\n\u2028\u2029]` | `.` without `s` flag | Character that terminates the line | `line‑term` `terminator` `term`
 
 ```javascript
-let hasDigit = vre`digit`.test(input);
+let hasDigit = cre`digit`.test(input);
 ```
 
 Character class keyword can also be complemented with the `not` operator:
 
 ```javascript
-let onlyDigits = input.replace(vre`not digit`, '');
+let onlyDigits = input.replace(cre`not digit`, '');
 ```
 
 ## Unicode Property
@@ -220,7 +220,7 @@ Character class that matches specific unicode property uses `property` (alias `p
 This only works if the `unicode` property is set.
 
 ```javascript
-let hasNonEnglishLetters = vre`lookahead not [A-Z] prop<Letter>`.test(input);
+let hasNonEnglishLetters = cre`lookahead not [A-Z] prop<Letter>`.test(input);
 ```
 
 You can also specify unicode properties in character class `[\p{...}]`.
@@ -254,7 +254,7 @@ The named capturing group looks similar to the labels in JavaScript.
 It is a name with colon at the end `name:`.
 
 ```javascript
-let match = input.match(vre`
+let match = input.match(cre`
     user: at-least-1 [a-zA-Z_.-]
     "@"
     address: at-least-1 [a-zA-Z_.-]
@@ -288,7 +288,7 @@ capturing group name or index enclosed by `< >`.
 
 
 ```javascript
-let hasRepeatingWords = vre`
+let hasRepeatingWords = cre`
     firstWord: at-least-1 word-char
     at-least-1 not word-char
     match<firstWord>
@@ -310,12 +310,12 @@ to get Negated assertion.
 
 ## Comments
 
-You can use comments inside VRE. They are the same as JavaScript's comments,
+You can use comments inside *CRE*. They are the same as JavaScript's comments,
 but you have to remember to escape `` ` `` and `${`
 since you are in tagged template.
 
 ```javascript
-let hasMath = vre`
+let hasMath = cre`
     /* The following expression will match
      * a simple math with two integers.
      */
@@ -329,17 +329,17 @@ let hasMath = vre`
 
 ## Interpolation
 
-Other values and expressions can be added to the VRE using interpolation.
+Other values and expressions can be added to the *CRE* using interpolation.
 There are tree kinds of interpolations: string interpolation, character class interpolation, expression interpolation.
 
 ### String interpolation
 
 You can place arbitrary string into the string literal. You don't need to
-escape it before using, the VRE will handle that for you.
+escape it before using, the *CRE* will handle that for you.
 
 ```javascript
 function hasVerbInAnyForm(text, verb) {
-    return vre.ignoreCase`
+    return cre.ignoreCase`
         word-boundary
         {
             "${verb}" or "${verb}s" or "${verb}es"
@@ -349,14 +349,14 @@ function hasVerbInAnyForm(text, verb) {
 }
 ```
 
-If the interpolated value is VRE, error will be thrown.
+If the interpolated value is *CRE*, error will be thrown.
 If it is not a string, it will be converted to string.
 
 ### Character class interpolation
 
 You can place arbitrary string into the character class.
 Each character from the string will be added to matching set of that class.
-You don't need to escape it before using, the VRE will handle that for you.
+You don't need to escape it before using, the *CRE* will handle that for you.
 
 Characters from interpolated value are added with escaping,
 so value `a-f` will be interpreted as `a\-f`. If this is not your intention,
@@ -365,7 +365,7 @@ you must specify each character in the interpolated string - `abcdef`.
 ```javascript
 function isInteger(text, isHex) {
     const additionalCharacters = isHex ? "abcdef" : "";
-    return vre.ignoreCase`
+    return cre.ignoreCase`
         start-of-text
         at-least-1 [0-9${additionalCharacters}]
         end-of-text
@@ -373,16 +373,16 @@ function isInteger(text, isHex) {
 }
 ```
 
-If the interpolated value is VRE, error will be thrown.
+If the interpolated value is *CRE*, error will be thrown.
 If it is not a string, it will be converted to string.
 
 ### Expression interpolation
 
-You can reuse VRE expression in another expression.
-The input expression must be a VRE expression created with the `vre` tag or a string.
-There is a slide difference between interpolating VRE expression and a string:
+You can reuse *CRE* expression in another expression.
+The input expression must be a *CRE* expression created with the `cre` tag or a string.
+There is a slide difference between interpolating *CRE* expression and a string:
 
-* Interpolated VRE expression becomes an atom, so, for example, adding `repeat`
+* Interpolated *CRE* expression becomes an atom, so, for example, adding `repeat`
   quantifier will affect entire interpolated expression.
   The `ignoreCase`, `unicode` and `legacy` flags must be the same in both
   expressions. JavaScript does not allow to change RegExp flags in the middle of
@@ -392,7 +392,7 @@ There is a slide difference between interpolating VRE expression and a string:
   the interpolated expression.
 
 ```javascript
-const number = vre`
+const number = cre`
     optional [+-]                   // Sign
     {
         at-least-1 digit            // Integral part
@@ -407,10 +407,10 @@ const number = vre`
     }
 `;
 
-const ws = vre`repeat whitespace`;
+const ws = cre`repeat whitespace`;
 
 function validateJSONArrayOfNumbers(text) {
-    return vre.cache.first`
+    return cre.cache.first`
         begin-of-text ${ws}   // Trim leading whitespaces
         "[" ${ws}             // Begin of array
         optional {            // Array can be empty
@@ -426,7 +426,7 @@ function validateJSONArrayOfNumbers(text) {
 }
 ```
 
-This is more comprehensive example of VRE. Now, you can judge what is
+This is more comprehensive example of *CRE*. Now, you can judge what is
 more readable: the above code, or the same function written in pure RegExp:
 
 ```javascript
@@ -437,15 +437,15 @@ function validateJSONArrayOfNumbers(text) {
 ```
 
 > [!NOTE]
-> If it is possible, try to interpolate VRE expression instead of strings.
-> Use string only when interpolated expression is not a full VRE expression.
+> If it is possible, try to interpolate *CRE* expression instead of strings.
+> Use string only when interpolated expression is not a full *CRE* expression.
 > For example:
 
 
 ```javascript
 function validateWord(text, allowEmpty) {
     let quantifier = allowEmpty ? 'repeat' : 'at-least-1';
-    return vre.cache`
+    return cre.cache`
         begin-of-text
         ${quantifier} word-character
         end-of-text

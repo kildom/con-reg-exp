@@ -1,4 +1,4 @@
-/*
+/*!
  * Copyright 2024 Dominik Kilian
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
@@ -76,9 +76,9 @@ function escapeCharacterClass(text: string, vmode: boolean) {
 
 /**
  * The class extends the native JavaScript `Error` class to provide
- * error handling specifically for syntax and logic errors in the Verbose Regular Expressions.
+ * error handling specifically for syntax and logic errors in the Convenient Regular Expressions.
  */
-export class VREError extends Error { };
+export class CREError extends Error { };
 
 
 class TokenizerError extends Error {
@@ -109,7 +109,7 @@ const quantifierRegExp = /^(?<lazy>lazy-|non-greeny-)?(?:(?<optional>optional)|(
 
 /**
  * Regular expression flags. Meaning the same as in RegExp class with additional `cache` field that controls
- * Verbose Regular Expression cache.
+ * Convenient Regular Expression cache.
  */
 interface Flags {
     multiline: boolean;
@@ -133,7 +133,7 @@ interface ExpressionSource {
 }
 
 /**
- * Interface embedded to the RegExp object created from the Verbose Regular Expression that provides information
+ * Interface embedded to the RegExp object created from the Convenient Regular Expression that provides information
  * needed to reuse the expression in a different one.
  */
 interface ExpressionTokenized extends ExpressionSource {
@@ -352,7 +352,7 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
                 result = result.concat(tokenize(value, innerPrefix, [], flags));
                 result.push({ position, type: TokenType.InterpolationEnd });
             } else {
-                // Verbose Regular Expression, first check if significant flags are the same.
+                // Convenient Regular Expression, first check if significant flags are the same.
                 if (flags.ignoreCase !== value.flags.ignoreCase) {
                     throw new TokenizerError(position, `Mismatching "ignoreCase" flag in interpolated expression. ` +
                         `Outer expression: "${flags.ignoreCase ? 'set' : 'unset'}", ` +
@@ -433,7 +433,7 @@ class Context {
             }
         }
         if (stack.length === 0) {
-            return new VREError(message);
+            return new CREError(message);
         }
         let position = token?.position;
         if (position === undefined) {
@@ -447,7 +447,7 @@ class Context {
             position = beginToken.position;
             message = 'Interpolated from:';
         }
-        return new VREError(longMessage.trimEnd());
+        return new CREError(longMessage.trimEnd());
     }
 
     private formatError(info: ExpressionSource, position: number, message: string) {
@@ -700,7 +700,7 @@ class CharacterClassProperty extends InvertibleNode {
         let obj: CharacterClassProperty | undefined = undefined;
         if (token.type === TokenType.Keyword && (token.text === 'prop' || token.text === 'property')) {
             if (!ctx.info.flags.unicode) {
-                throw new VREError('Property requires <UNICODE> flag.');
+                throw new CREError('Property requires <UNICODE> flag.');
             }
             obj = new CharacterClassProperty(false);
             let id = ctx.read();
@@ -1154,10 +1154,10 @@ type CacheNode = Map<string | number, CacheNode | RegExp>;
 const cache = new Map<string, CacheNode | RegExp>();
 const cacheExpId = new WeakMap<RegExp, number>();
 let cacheExpIdLast = 1;
-const proxyCache: { [key: string]: typeof vre } = {};
+const proxyCache: { [key: string]: typeof cre } = {};
 
 
-function vreImpl(flags: Partial<Flags>, str: TemplateStringsArray, ...values: any[]): RegExp {
+function creImpl(flags: Partial<Flags>, str: TemplateStringsArray, ...values: any[]): RegExp {
     try {
         let raw = str.raw;
         let prefix = generatePrefixForText(raw);
@@ -1217,8 +1217,8 @@ function vreImpl(flags: Partial<Flags>, str: TemplateStringsArray, ...values: an
         return result;
     } catch (err) {
         // Rethrow the error to remove internal stacktrace.
-        if (err instanceof VREError) {
-            throw new VREError(err.message);
+        if (err instanceof CREError) {
+            throw new CREError(err.message);
         }
         throw err;
     }
@@ -1228,7 +1228,7 @@ function vreImpl(flags: Partial<Flags>, str: TemplateStringsArray, ...values: an
 const proxyHandler = {
     apply(target: object, thisArg: any, argumentsList: any[]) {
         let obj = (target as any)();
-        return vreImpl(obj, ...(argumentsList as [TemplateStringsArray, string]));
+        return creImpl(obj, ...(argumentsList as [TemplateStringsArray, string]));
     },
     get(target: object, prop: string) {
         let obj = (target as any)();
@@ -1253,20 +1253,20 @@ const proxyHandler = {
 
 /**
  * The function is a tagged template literal function that produces RegExp object from
- * the Verbose Regular Expression.
+ * the Convenient Regular Expression.
  */
-export default function vre(str: TemplateStringsArray, ...values: any[]): RegExp {
-    return vreImpl({}, str, ...values);
+export default function cre(str: TemplateStringsArray, ...values: any[]): RegExp {
+    return creImpl({}, str, ...values);
 }
 
 
-vre.indices = new Proxy(() => ({ _id: 'indices', indices: true }), proxyHandler) as typeof vre;
-vre.first = new Proxy(() => ({ _id: 'first', global: false }), proxyHandler) as typeof vre;
-vre.ignoreCase = new Proxy(() => ({ _id: 'ignoreCase', ignoreCase: true }), proxyHandler) as typeof vre;
-vre.legacy = new Proxy(() => ({ _id: 'legacy', unicode: false }), proxyHandler) as typeof vre;
-vre.unicode = new Proxy(() => ({ _id: 'unicode', unicodeSets: true }), proxyHandler) as typeof vre;
-vre.sticky = new Proxy(() => ({ _id: 'sticky', sticky: true }), proxyHandler) as typeof vre;
-vre.cache = new Proxy(() => ({ _id: 'cache', cache: true }), proxyHandler) as typeof vre;
+cre.indices = new Proxy(() => ({ _id: 'indices', indices: true }), proxyHandler) as typeof cre;
+cre.first = new Proxy(() => ({ _id: 'first', global: false }), proxyHandler) as typeof cre;
+cre.ignoreCase = new Proxy(() => ({ _id: 'ignoreCase', ignoreCase: true }), proxyHandler) as typeof cre;
+cre.legacy = new Proxy(() => ({ _id: 'legacy', unicode: false }), proxyHandler) as typeof cre;
+cre.unicode = new Proxy(() => ({ _id: 'unicode', unicodeSets: true }), proxyHandler) as typeof cre;
+cre.sticky = new Proxy(() => ({ _id: 'sticky', sticky: true }), proxyHandler) as typeof cre;
+cre.cache = new Proxy(() => ({ _id: 'cache', cache: true }), proxyHandler) as typeof cre;
 
 
 // #endregion

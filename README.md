@@ -1,11 +1,11 @@
-# Verbose Regular Expressions
+# Convenient Regular Expressions
 
 〚 Guide 〛&nbsp;
 〚 [Syntax overview](docs/overview.md) 〛&nbsp;
 〚 Installing 〛&nbsp;
 
 This is a JavaScript module that provides different syntax for regular expressions.
-The syntax is more verbose making it much easier to understand, review, maintain, and more.
+The syntax is more convenient making it much easier to understand, review, maintain, and more.
 
 > [!NOTE]
 > This is still work in progress project. The main functionality is done.
@@ -37,7 +37,7 @@ The syntax is more verbose making it much easier to understand, review, maintain
 
 * **Code review is faster and more accurate**
 
-  It easier to understand well formatted verbose code and changes
+  It easier to understand well formatted convenient code and changes
   that are happening there. Have you ever try to review changes
   in regular expression that are longer than 100 characters?
   What was the felling?
@@ -72,10 +72,10 @@ function guessWhatDoesThisFunction(text) {
 }
 ```
 
-Verbose Regular Expressions:
+Convenient Regular Expressions:
 
 ```javascript
-const number = vre`
+const number = cre`
     optional [+-]                   // Sign
     {
         at-least-1 digit            // Integral part
@@ -90,10 +90,10 @@ const number = vre`
     }
 `;
 
-const ws = vre`repeat whitespace`;
+const ws = cre`repeat whitespace`;
 
 function guessWhatDoesThisFunction(text) {
-    return vre`
+    return cre`
         begin-of-text ${ws}   // Trim leading whitespaces
         "[" ${ws}             // Begin of array
         optional {            // Optional, because array can be empty
@@ -110,7 +110,7 @@ function guessWhatDoesThisFunction(text) {
 ```
 
 Which one was easier to understand? I assuming that you don't know
-the verbose regular expressions [syntax](docs/overview.md) yet. Were you able to guess
+the convenient regular expressions [syntax](docs/overview.md) yet. Were you able to guess
 despite this?
 
 Click or hover the link to see [the answer](#It-validates-if-the-input-is-a-json-containing-an-array-of-numbers).
