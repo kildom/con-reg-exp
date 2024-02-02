@@ -11,6 +11,26 @@ The syntax is more convenient making it much easier to understand, review, maint
 > This is still work in progress project. The main functionality is done.
 > More work is needed in context of documentation, tests, build and deployment.
 
+## Usage
+
+1. Install with `npm`:
+
+    ```
+    npm install con-reg-exp
+    ```
+
+2. Import it:
+
+    ```javascript
+    import cre from "con-reg-exp"; // or: const cre = require("con-reg-exp")
+    ```
+
+3. Use it as a tagged template:
+
+    ```javascript
+    const myRegExp = cre`"Write your expression here."`;
+    ```
+
 ## Benefits
 
 * **You can add whitespaces**
@@ -75,6 +95,9 @@ function guessWhatDoesThisFunction(text) {
 Convenient Regular Expressions:
 
 ```javascript
+
+import cre from 'con-reg-exp';
+
 const number = cre`
     optional [+-]                   // Sign
     {

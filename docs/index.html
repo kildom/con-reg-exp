@@ -1,0 +1,314 @@
+<html>
+
+<head>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400..800&display=swap');
+
+        body {
+            padding: 0px;
+            margin: 0px;
+            font-family: sans-serif;
+            font-size: 14px;
+            min-height: 100vh;
+            background-color: #212124;
+            color: white;
+            background: rgb(6, 0, 106);
+            background: linear-gradient(29deg, #06006a 0%, #4479ff 89%, #bcd7ff 100%);
+        }
+
+        #title {
+            font-family: "EB Garamond", serif;
+            font-size: calc(15px + 2vw);
+            padding: 10vh 0px 0px;
+            text-align: center;
+            font-weight: bold;
+            text-shadow: #00000042 0px 0px 4px;
+        }
+
+        #subtitle {
+            font-size: calc(15px + 0.7vw);
+            padding: 0.6em 0px 3em 20vw;
+            margin: 0.2em calc((100vw - 20em) / 2) 0em 0em;
+            text-align: right;
+            border-top: 1px solid #ffffff38;
+            text-shadow: #00000042 0px 0px 3px;
+        }
+
+        #feature-container {
+            display: inline-block;
+            overflow-y: hidden;
+            height: 1.3em;
+            text-align: right;
+        }
+
+        #feature-list {
+            position: relative;
+        }
+
+        .feature {
+            height: 1.5em;
+        }
+
+        #feature-ending {
+            display: inline-block;
+            overflow-y: hidden;
+            height: 1.3em;
+            text-align: right;
+        }
+
+        div.sample {
+            max-height: 470px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-width: 100%;
+            width: fit-content;
+            margin: 5px 70px 0px 70px;
+            box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.329)
+        }
+
+        div.sample-part {
+            background-color: #1c2553;
+            padding: 0.2em 1em;
+            margin: 0px;
+            color: #b1b1b1;
+        }
+
+        pre.sample-code, pre.sample-title {
+            background-color: #212124;
+            padding: 1em 1.5em;
+            margin: 0px;
+            color: #BBB;
+        }
+
+        pre.sample-title {
+            color: #4c7743
+        }
+
+        .keyword {
+            color: #3d84e0
+        }
+
+        .comment {
+            color: #4c7743
+        }
+
+        .string {
+            color: #b49c6f
+        }
+
+        .class {
+            color: #cfcfa9
+        }
+
+
+        /*-----------------------------*/
+
+        .swiper {
+        }
+
+        .swiper-slide {
+            width: fit-content;
+        }
+
+        .swiper {
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="content">
+        <div id="title">Convenient Regular Expressions</div>
+        <div id="subtitle">
+            <div id="feature-container">
+                <div id="feature-list">
+                    <div class="feature">improve</div>
+                    <div class="feature">organize</div>
+                    <div class="feature">maintain</div>
+                    <div class="feature">review</div>
+                    <div class="feature">express in words</div>
+                    <div class="feature">reuse</div>
+                    <div class="feature">clear</div>
+                    <div class="feature">improve</div>
+                </div>
+            </div>
+            <div id="feature-ending">your RegExp.</div>
+        </div>
+
+        <div class="swiper mySwiper" style="height: 500px;">
+            <div class="swiper-wrapper">
+                <div class="swiper-slide"><div class="sample">
+                    <pre class="sample-title">// Match floating point number</pre>
+                    <div class="sample-part">Classic regular expression:</div>
+                    <pre class="sample-code">/[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/</pre>
+        
+                    <div class="sample-part">Convenient regular expression:</div>
+                    <pre class="sample-code">
+cre`
+    <span class="keyword">optional</span> <span class="string">[+-]</span>                   <span class="comment">// Sign</span>
+    {
+        <span class="keyword">at-least-1</span> <span class="class">digit</span>            <span class="comment">// Integral part</span>
+        <span class="keyword">optional</span> (<span class="string">"."</span> <span class="keyword">repeat</span> <span class="class">digit</span>) <span class="comment">// Optional factional part</span>
+    <span class="keyword">or</span>
+        <span class="string">"."</span> <span class="keyword">at-least-1</span> <span class="class">digit</span>        <span class="comment">// Variant with only fractional part</span>
+    }
+    <span class="keyword">optional</span> {                      <span class="comment">// Optional exponent part</span>
+        <span class="string">[eE]</span>
+        <span class="keyword">optional</span> <span class="string">[+-]</span>
+        <span class="keyword">at-least-1</span> <span class="class">digit</span>
+    }`</pre>
+                </div></div>
+                <div class="swiper-slide"><div class="sample">
+                    <pre class="sample-title">// Match JSON array of floating point numbers</pre>
+                    <div class="sample-part">Classic regular expression:</div>
+                    <pre class="sample-code">/^\s*\[\s*(?:(?:[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*,\s*)*<br/>    [+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*)?\]\s*$/</pre>
+        
+                    <div class="sample-part">Convenient regular expression:</div>
+                    <pre class="sample-code">
+
+const number = cre`
+    optional [+-]                   // Sign
+    {
+        at-least-1 digit            // Integral part
+        optional ("." repeat digit) // Optional factional part
+    or
+        "." at-least-1 digit        // Variant with only fractional part
+    }
+    optional {                      // Optional exponent part
+        [eE]
+        optional [+-]
+        at-least-1 digit
+    }
+`;
+
+const ws = cre`repeat whitespace`;
+
+console.log(cre`
+        begin-of-text ${ws}   // Trim leading whitespaces
+        "[" ${ws}             // Begin of array
+        optional {            // Optional, because array can be empty
+            repeat {          // Numbers with trailing comma
+                ${number} ${ws}
+                "," ${ws}
+            }
+            ${number} ${ws}   // Last number has no comma
+        }
+        "]" ${ws}             // End of array
+        end-of-text
+    `);
+
+                    </pre>
+                </div></div>
+                <div class="swiper-slide"><div class="sample">
+                    <pre class="sample-title">// Match floating point number</pre>
+                    <div class="sample-part">Classic regular expression:</div>
+                    <pre class="sample-code">/[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/</pre>
+        
+                    <div class="sample-part">Convenient regular expression:</div>
+                    <pre class="sample-code">
+cre`
+    <span class="keyword">optional</span> <span class="string">[+-]</span>                   <span class="comment">// Sign</span>
+    {
+        <span class="keyword">at-least-1</span> <span class="class">digit</span>            <span class="comment">// Integral part</span>
+        <span class="keyword">optional</span> (<span class="string">"."</span> <span class="keyword">repeat</span> <span class="class">digit</span>) <span class="comment">// Optional factional part</span>
+    <span class="keyword">or</span>
+        <span class="string">"."</span> <span class="keyword">at-least-1</span> <span class="class">digit</span>        <span class="comment">// Variant with only fractional part</span>
+    }
+    <span class="keyword">optional</span> {                      <span class="comment">// Optional exponent part</span>
+        <span class="string">[eE]</span>
+        <span class="keyword">optional</span> <span class="string">[+-]</span>
+        <span class="keyword">at-least-1</span> <span class="class">digit</span>
+    }`</pre>
+                </div></div>
+                <div class="swiper-slide"><div class="sample">
+                    <pre class="sample-title">// Match JSON array of floating point numbers</pre>
+                    <div class="sample-part">Classic regular expression:</div>
+                    <pre class="sample-code">/^\s*\[\s*(?:(?:[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*,\s*)*<br/>    [+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\s*)?\]\s*$/</pre>
+        
+                    <div class="sample-part">Convenient regular expression:</div>
+                    <pre class="sample-code">
+
+const number = cre`
+    optional [+-]                   // Sign
+    {
+        at-least-1 digit            // Integral part
+        optional ("." repeat digit) // Optional factional part
+    or
+        "." at-least-1 digit        // Variant with only fractional part
+    }
+    optional {                      // Optional exponent part
+        [eE]
+        optional [+-]
+        at-least-1 digit
+    }
+`;
+
+const ws = cre`repeat whitespace`;
+
+console.log(cre`
+        begin-of-text ${ws}   // Trim leading whitespaces
+        "[" ${ws}             // Begin of array
+        optional {            // Optional, because array can be empty
+            repeat {          // Numbers with trailing comma
+                ${number} ${ws}
+                "," ${ws}
+            }
+            ${number} ${ws}   // Last number has no comma
+        }
+        "]" ${ws}             // End of array
+        end-of-text
+    `);
+
+                    </pre>
+                </div></div>
+            </div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+            <div class="swiper-pagination"></div>
+        </div>
+
+
+        
+    </div>
+
+    <script>
+        let x = 0;
+        function updateFeature() {
+            x++;
+            if (x == $(".feature").length) {
+                $("#feature-list").css('top', '0px');
+                x = 1;
+            }
+            let top = $('.feature').slice(x, x + 1).position().top;
+            $("#feature-list").animate({
+                top: -top + 'px',
+            }, 500, function () {
+                setTimeout(updateFeature, 1100);
+            });
+        }
+        setTimeout(updateFeature, 1400);
+
+        var swiper = new Swiper(".mySwiper", {
+            slidesPerView: "auto",
+            spaceBetween: 0,
+            pagination: {
+                el: ".swiper-pagination",
+                clickable: true,
+            },
+            navigation: {
+                nextEl: ".swiper-button-next",
+                prevEl: ".swiper-button-prev",
+            },
+        });
+    </script>
+</body>
+
+</html>

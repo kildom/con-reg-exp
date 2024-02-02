@@ -17,7 +17,6 @@
 */
 
 import cre from '../src/con-reg-exp';
-import fs from 'node:fs';
 
 let grammar = {
     "scopeName": "source.cre",

@@ -7,6 +7,33 @@ The examples shown here are kept simple.
 Looking at them, you may not see benefits of *CRE*,
 but true potential of *CRE* is really visible with longer and complex expressions.
 
+## Installing
+
+You can install the **Convenient Regular Expressions** using `npm`:
+
+```shell
+npm install con-reg-exp
+```
+Now, you can import it:
+
+```javascript
+import cre from "cre";
+```
+
+or:
+
+```javascript
+const cre = require("cre");
+```
+
+<!--
+If you prefer to use browser-ready bundle, use the following
+script. The `cre` become globally available.
+```html
+<script type="text/javascript" src="con-reg-exp.js"></script>
+```
+-->
+
 ## Embedding into JavaScript
 
 The *CRE* are written using the
@@ -452,3 +479,28 @@ function validateWord(text, allowEmpty) {
     `.test(text);
 }
 ```
+
+## Language summary
+
+Operators ordered by precedence.
+
+Operator | Name | Precedence | Comment
+--|--|:--:|--
+&nbsp; | **GROUPING<br>OPERATORS**
+`( )` | Parentheses | 4 | Suggested for single-line groups.
+`{ }` | Brackets | 4 | Suggested for multi-line groups.
+&nbsp; | **UNARY (PREFIX)<br>OPERATORS**
+`not` | Complement | 3 | Applies only to some operands.
+`group` | Positional capturing<br>group | 3
+*`NAME`* `:` | Named capturing<br>group | 3
+`lookahead` | Lookahead assertion | 3
+`lookbehind` | lookbehind assertion | 3
+`optional` | Optional quantifier | 3 | 0 to 1 times
+`repeat` | Unlimited quantifier | 3 | 0 to ∞ times
+`at‑least‑N` | Lower limit quantifier | 3 | N to ∞ times
+`at‑most‑N` | Upper limit quantifier | 3 | 0 to N times
+`N‑times` | Exact quantifier | 3 | exactly N times
+`N‑to‑M‑times` | Range quantifier | 3 | N to M times
+&nbsp; | **BINARY<br>OPERATORS**
+` ` | Concatenation | 2 | Operands next to each other without any conjunction characters.
+`or` | Disjunction | 1

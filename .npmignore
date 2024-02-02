@@ -6,4 +6,5 @@
 /*.tgz
 /*.tar.gz
 /dist/default/
+/dist/browser/
 /temp/

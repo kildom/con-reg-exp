@@ -23,6 +23,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "prebuild": "npx esbuild --target=chrome62,edge79,firefox53,safari11 --bundle --global-name=GtEa1M6 --sourcemap=linked --minify src/con-reg-exp.ts --outfile=dist/browser/con-reg-exp.min.js && npx esbuild --target=chrome62,edge79,firefox53,safari11 --bundle --global-name=GtEa1M6 --sourcemap=linked src/con-reg-exp.ts --outfile=dist/browser/con-reg-exp.js",
     "build": "npx tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json",
     "postbuild": "npx ts-node --swc scripts/postbuild.ts",
     "test-imports": "npx ts-node --swc test/test-imports/run-test.ts"
