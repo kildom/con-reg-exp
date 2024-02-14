@@ -7,6 +7,13 @@ import cre from '../src/con-reg-exp';
 import { template } from 'underscore';
 import { execFileSync } from 'node:child_process';
 
+const copyFiles = {
+    'docs/tmpl/index.js': 'web/index.js',
+    'docs/tmpl/index.css': 'web/index.css',
+    'docs/tmpl/npm.svg': 'web/npm.svg',
+    'docs/tmpl/github-mark.svg': 'web/github-mark.svg',
+};
+
 let templateData = {
     title: '',
     copy: '',
@@ -149,7 +156,7 @@ function processSections(contentText: string) {
     }
 }
 
-async function processSamples() {
+function processSamples() {
     for (let file of fs.readdirSync('docs/samples').sort()) {
         if (!file.endsWith('.mjs')) continue;
         let sourceCode = fs.readFileSync(`docs/samples/${file}`, 'utf-8');
@@ -174,7 +181,7 @@ async function processSamples() {
         while (regexp.length % regexpLineLength <= 2 * regexpLines) {
             regexpLineLength++;
         }
-        let regexpSplitted:string[] = [];
+        let regexpSplitted: string[] = [];
         while (regexp.length > 0) {
             regexpSplitted.push(regexp.substring(0, regexpLineLength));
             regexp = regexp.substring(regexpLineLength);
@@ -191,14 +198,18 @@ async function main() {
     processMenu(menuText);
     processSubtitle(subtitlesText);
     processSections(contentText);
-    await processSamples();
+    processSamples();
 
     //console.log(require('util').inspect(templateData, false, null, true))
 
-    let templateText = fs.readFileSync(`docs/index.template.html`, 'utf-8');
+    let templateText = fs.readFileSync(`docs/tmpl/index.tmpl.html`, 'utf-8');
     let compiled = template(templateText);
     let output = compiled(templateData);
-    fs.writeFileSync(`docs/index.html`, output);
+    fs.mkdirSync('web', { recursive: true });
+    fs.writeFileSync('web/index.html', output);
+    for (let [from, to] of Object.entries(copyFiles)) {
+        fs.copyFileSync(from, to);
+    }
 }
 
 main();

@@ -124,12 +124,12 @@ You can use some single character literals instead of placing them in a string.
 
 Value | Keyword and aliases
 ------|--------------------
-`\n`  | `new-line`, `nl`, `\n`, `line-feed`, `lf`
-`\r`  | `carriage-return`, `cr`, `\r`
-`\t`  | `tabulation`, `tab`, `\t`
-`\0`  | `null`, `nul`, `\0`
-` `   | `space`, `sp`
-`\xA0`| `nbsp`
+`"\n"`  | `new-line`, `nl`, `\n`, `line-feed`, `lf`
+`"\r"`  | `carriage-return`, `cr`, `\r`
+`"\t"`  | `tabulation`, `tab`, `\t`
+`"\0"`  | `null`, `nul`, `\0`
+`" "`   | `space`, `sp`
+`"\xA0"`| `nbsp`
 
 ## Character class
 

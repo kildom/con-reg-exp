@@ -9,3 +9,4 @@ node_modules
 /*.tgz
 /*.tar.gz
 /docs/index.html
+/web/
