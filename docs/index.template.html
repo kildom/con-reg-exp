@@ -1,0 +1,67 @@
+<html>
+<head>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="../dist/browser/con-reg-exp.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="index.js"></script>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div id="menu">
+        <%= menu.join('') %>
+    </div>
+    <div id="content">
+        <div id="title"><%= title %></div>
+        <div id="subtitle">
+            <div id="feature-container">
+                <div id="feature-list">
+                    <%= subtitleList.map(x => `<div class="feature">${x}</div>`).join('') %>
+                </div>
+            </div>
+            <div id="feature-ending"><%= subtitleEnding %></div>
+        </div>
+        <div class="swiper mySwiper">
+            <div class="swiper-wrapper">
+                <% for (sample of samples) { %>
+                <div class="swiper-slide">
+                    <div class="sample">
+                        <pre class="sample-title language-javascriptwithcre">// <%- sample.title %></pre>
+                        <div class="sample-part">Classic</div>
+                        <pre
+                            class="sample-code language-javascriptwithcre"><%- sample.regexp %></pre>
+
+                        <div class="sample-part">Convenient Regular Expressions</div>
+                        <pre class="sample-code language-javascriptwithcre"><%- sample.code %></pre>
+                    </div>
+                </div>
+                <% } %>
+            </div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+            <div class="swiper-pagination"></div>
+        </div>
+    </div>
+    <div id="details">
+        <% for (let section of sections) { let className = section.simple && section.sub.length > 4 ? 'benefit' : 'step' %>
+        <div class="benefits-header" id="<%- getHtmlId(section.title) %>">
+            <%= section.title %>
+        </div>
+        <div class="benefits">
+            <% for (let sub of section.sub) { %>
+                <div class="<%= className %>" id="<%- getHtmlId(sub.title) %>">
+                    <div class="benefit-title"><%= sub.title %></div>
+                    <div class="benefit-description">
+                        <%= sub.html %>
+                    </div>
+                </div>
+            <% } %>
+        </div>
+        <% } %>
+    </div>
+    <div id="copyright"><%= copy %></div>
+</body>
+</html>

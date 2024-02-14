@@ -1,0 +1,260 @@
+
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400..800&display=swap');
+
+body {
+    padding: 0px;
+    margin: 0px;
+    font-family: sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    background-color: #212124;
+    color: white;
+    background: rgb(6, 0, 106);
+    background: linear-gradient(29deg, #06006a 0%, #4479ff 89%, #bcd7ff 100%);
+    background-attachment: fixed;
+}
+
+/*---------------------------------------------------------------- MENU
+*/
+
+#menu {
+    font-size: calc(0.7vw + 8px);
+    font-weight: bold;
+    position: fixed;
+    background-color: #ffffff;
+    color: #212124;
+    margin: 0px;
+    padding: 0px;
+    width: 100%;
+    box-shadow: 0px 0px 8px 1px #00000065;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    align-items: stretch;
+    align-content: stretch;
+    z-index: 10000;
+}
+
+#menu a {
+    color: #212124;
+    text-decoration: none;
+    margin: 0.3em 0.7em 0.3em 0em;
+    padding: 0.3em 0.8em;
+    border-radius: 5px;
+}
+
+#menu a img {
+    display: inline-block;
+    vertical-align: -0.18em;
+    padding: 0px 10px 0px 0px;
+    height: 1.2em;
+    width: 1.2em;
+}
+
+#menu a>span {
+    display: inline-block;
+    vertical-align: -0.18em;
+    padding: 0px 10px 0px 0px;
+    height: 1.2em;
+    overflow: hidden;
+    max-width: 2em;
+}
+
+#menu a>span>span {
+    font-size: 1.4em;
+}
+
+#menu a:hover {
+    background-color: #c4c4c5;
+}
+
+/*---------------------------------------------------------------- TITLE
+*/
+
+#title {
+    font-family: "EB Garamond", serif;
+    font-size: calc(15px + 2vw);
+    padding: 10vh 0px 0px;
+    text-align: center;
+    font-weight: bold;
+    text-shadow: #00000042 0px 0px 4px;
+}
+
+#subtitle {
+    font-size: calc(15px + 0.7vw);
+    padding: 0.6em 0px 3em 20vw;
+    margin: 0.2em calc((100vw - 20em) / 2) 0em 0em;
+    text-align: right;
+    border-top: 1px solid #ffffff38;
+    text-shadow: #00000042 0px 0px 3px;
+}
+
+#feature-container {
+    display: inline-block;
+    overflow-y: hidden;
+    height: 1.3em;
+    text-align: right;
+}
+
+#feature-list {
+    position: relative;
+}
+
+.feature {
+    height: 1.5em;
+}
+
+#feature-ending {
+    display: inline-block;
+    overflow-y: hidden;
+    height: 1.3em;
+    text-align: right;
+}
+
+/*---------------------------------------------------------------- SWIPER
+*/
+
+.swiper {
+    height: 600px;
+}
+
+.swiper-slide {
+    width: fit-content;
+}
+
+.mySwiper {
+    visibility: hidden;
+}
+
+/*---------------------------------------------------------------- SAMPLES
+*/
+
+div.sample {
+    max-height: 570px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-width: 100%;
+    width: fit-content;
+    margin: 5px 0px 0px 0px;
+    box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.329)
+}
+
+pre.sample-code,
+pre.sample-title {
+    background-color: #212124;
+    padding: 1em 1.5em;
+    margin: 0px;
+    color: #BBB;
+}
+
+div.sample-part {
+    background-color: #1c2553;
+    padding: 0.2em 1em;
+    margin: 0px;
+    color: #b1b1b1;
+}
+
+/*---------------------------------------------------------------- DETAILS
+*/
+
+#details {
+    background-color: #cfd5e4;
+    box-shadow: 0px 0px 8px 1px #00000065;
+    margin-top: 30px;
+    padding: 30px;
+    color: #334;
+}
+
+.benefits-header {
+    font-family: "EB Garamond", serif;
+    font-size: 30px;
+    font-weight: bold;
+    max-width: 1300px;
+    margin: 0px auto;
+    padding: 60px 20px 0px;
+}
+
+.benefits {
+    display: flex;
+    justify-content: space-evenly; 
+    align-items: stretch; 
+    flex-wrap: wrap; 
+    align-content: flex-start;
+    gap: 30px 60px;
+    padding: 50px 0px 20px;
+    max-width: 1300px;
+    margin: 0px auto;
+}
+
+.benefit-title {
+    font-family: "EB Garamond", serif;
+    font-size: 22px;
+    font-weight: bold;
+    padding: 0px 0px 10px;
+    text-align: center;
+}
+
+.benefit {
+    margin: 0px;
+    padding: 0px;
+    width: 300px;
+    color: #1c2553;
+    text-align: center;
+    font-size: 16px;
+    line-height: 1.3em;
+}
+
+.step {
+    margin: 0px;
+    padding: 0px;
+    width: 500px;
+    color: #1c2553;
+    text-align: left;
+    margin: 0px;
+    padding: 0px;
+    text-align: justify;
+    font-size: 16px;
+    line-height: 1.3em;
+}
+
+/*---------------------------------------------------------------- FOOTER
+*/
+
+#copyright {
+    margin: 30px 70px 30px 0px;
+    color: white;
+    font-size: 16px;
+    text-align: right;
+}
+
+/*---------------------------------------------------------------- CODE
+*/
+
+code {
+    border: 1px solid #00000027;
+    padding: 0.1em 0.3em;
+    border-radius: 0.2em;
+    background-color: #ffffff41;
+}
+
+pre > code {
+    border: unset;
+    padding: 0px;
+    border-radius: 0.3em;
+    background-color: unset;
+    font-size: 15px;
+}
+
+/*---------------------------------------------------------------- LINKS
+*/
+
+a {
+    text-decoration: underline;
+    color: #00D;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: #2a4b7e;
+}

@@ -1,0 +1,7 @@
+{
+  "name": "samples",
+  "private": true,
+  "dependencies": {
+    "con-reg-exp": "^0.1.0"
+  }
+}

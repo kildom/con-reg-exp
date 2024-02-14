@@ -15,9 +15,13 @@
     "test": "test"
   },
   "devDependencies": {
+    "@types/underscore": "^1.11.15",
     "esbuild": "^0.20.0",
+    "showdown": "^2.1.0",
+    "showdown-highlight": "^3.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
+    "underscore": "^1.13.6",
     "webpack": "^5.90.0",
     "webpack-cli": "^5.1.4"
   },
@@ -26,7 +30,8 @@
     "prebuild": "npx esbuild --target=chrome62,edge79,firefox53,safari11 --bundle --global-name=GtEa1M6 --sourcemap=linked --minify src/con-reg-exp.ts --outfile=dist/browser/con-reg-exp.min.js && npx esbuild --target=chrome62,edge79,firefox53,safari11 --bundle --global-name=GtEa1M6 --sourcemap=linked src/con-reg-exp.ts --outfile=dist/browser/con-reg-exp.js",
     "build": "npx tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json",
     "postbuild": "npx ts-node --swc scripts/postbuild.ts",
-    "test-imports": "npx ts-node --swc test/test-imports/run-test.ts"
+    "test-imports": "npx ts-node --swc test/test-imports/run-test.ts",
+    "build-web": "npx ts-node --swc scripts/build-web-index.ts"
   },
   "repository": {
     "type": "git",
