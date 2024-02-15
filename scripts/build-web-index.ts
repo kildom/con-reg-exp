@@ -12,6 +12,7 @@ const copyFiles = {
     'docs/tmpl/index.css': 'web/index.css',
     'docs/tmpl/npm.svg': 'web/npm.svg',
     'docs/tmpl/github-mark.svg': 'web/github-mark.svg',
+    'docs/tmpl/docs.css': 'web/docs.css',
 };
 
 let templateData = {

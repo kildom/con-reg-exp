@@ -1,0 +1,393 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Rosarivo:ital@0;1&display=swap');
+
+body {
+    font-family: "Roboto", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    padding: 0px;
+    margin: 0px;
+    min-height: 100vh;
+}
+
+table {
+    font-family: "Roboto", sans-serif;
+    font-size: 16px;
+}
+
+div#content {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-content: stretch;
+    align-items: stretch;
+}
+
+div#content>div:nth-child(1) {
+    order: 0;
+    flex: 0 0 330px;
+    align-self: auto;
+    overflow: auto;
+    height: 100vh;
+}
+
+div#content>div:nth-child(2) {
+    order: 0;
+    flex: 1 1 auto;
+    align-self: auto;
+}
+
+@media print {
+    div#toc {
+        display: none;
+    }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: "Rosarivo", serif;
+}
+
+code {
+    padding: 0.2em 0.4em;
+    margin: 0px;
+    font-size: 85%;
+    white-space: break-spaces;
+    background-color: #EEE;
+    border-radius: 6px;
+}
+
+blockquote {
+    border-left: 5px solid #DDD;
+    padding: 10px 20px;
+    margin: 10px 5px;
+}
+
+a {
+    color: #001d9c;
+}
+
+a:hover {
+    color: #7340c5;
+}
+
+li {
+    margin-top: 0.35em;
+}
+
+blockquote:has(> div.gitHubAlert-note),
+blockquote:has(> div.gitHubAlert-tip),
+blockquote:has(> div.gitHubAlert-important),
+blockquote:has(> div.gitHubAlert-warning),
+blockquote:has(> div.gitHubAlert-caution) {
+    border-left: none;
+    padding: 0px;
+    margin: 0px;
+}
+
+div.gitHubAlert-note,
+div.gitHubAlert-tip,
+div.gitHubAlert-important,
+div.gitHubAlert-warning,
+div.gitHubAlert-caution {
+    padding: 6px 20px 10px;
+    margin: 15px 5px;
+}
+
+div.gitHubAlert-note {
+    background-color: #f1f4ff;
+    border-left: 5px solid #223fbd;
+    --color-alert: #223fbd;
+    --char-alert: "ⓘ";
+}
+
+div.gitHubAlert-tip {
+    background-color: #f1fff5;
+    border-left: 5px solid #1b9c51;
+    --color-alert: #1b9c51;
+    --char-alert: "⚐";
+}
+
+div.gitHubAlert-important {
+    background-color: #fcf1ff;
+    border-left: 5px solid #8f1374;
+    --color-alert: #8f1374;
+    --char-alert: "!!";
+}
+
+div.gitHubAlert-warning {
+    background-color: #fffaf1;
+    border-left: 5px solid #e27c08;
+    --color-alert: #e27c08;
+    --char-alert: "⚠";
+}
+
+div.gitHubAlert-caution {
+    background-color: #fff4f1;
+    border-left: 5px solid #be1919;
+    --color-alert: #be1919;
+    --char-alert: "☒";
+}
+
+div.gitHubAlert-title {
+    padding: 0px 0px 10px;
+    font-weight: bold;
+    color: var(--color-alert);
+}
+
+div.gitHubAlert-title::before {
+    content: var(--char-alert);
+    margin: 0px 10px 0px 0px;
+    padding: 2px;
+    font-size: 130%;
+    display: inline-block;
+    position: relative;
+    top: 0.1em;
+}
+
+div.gitHubAlert-text>p:first-child {
+    margin-top: 0px;
+}
+
+div.gitHubAlert-text>p:last-child {
+    margin-bottom: 0px;
+}
+
+div#toc {
+    position: relative;
+    --box-shadow: 0px 0px 7px rgba(66, 68, 90, 1);
+}
+
+div#toc>div {
+    width: 330px;
+    max-height: 100vh;
+    height: 100vh;
+    overflow-y: auto;
+    position: fixed;
+    background-color: #e7ebee;
+    box-shadow: 0px 0px 7px rgba(66, 68, 90, 1);
+}
+
+div#toc>div>div {
+    padding: 16px 0px 40px 6px;
+    background-color: #e7ebee;
+    --box-shadow: 0px 0px 7px rgba(66, 68, 90, 1);
+}
+
+div#toc ul {
+    margin: 0px;
+    padding: 0px 0px 0px 20px;
+    list-style-type: none;
+}
+
+div#toc li {
+    margin: 0px;
+    padding: 2px 0px;
+}
+
+div#toc li a {
+    text-decoration: none;
+    color: #424242;
+}
+
+div#toc li a:hover {
+    text-decoration: none;
+    color: #373b4b;
+    text-shadow: 0px 0px 4px #42445a80;
+}
+
+div#toc li li {
+    font-size: 96%;
+    padding: 1px 0px;
+}
+
+div#toc li li li {
+    font-size: 90%;
+    padding: 1px 0px;
+}
+
+div#text-content {
+    padding-bottom: 100px;
+}
+
+pre code.hljs {
+    display: block;
+    overflow-x: auto;
+    padding: 16px;
+    background-color: #F2F2F2;
+    margin: 0px;
+    white-space: pre;
+}
+
+.hljs {
+    color: #24292e;
+    background: #ffffff
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+    color: #d33343
+}
+
+.hljs-title,
+.hljs-title.class_,
+.hljs-title.class_.inherited__,
+.hljs-title.function_ {
+    color: #683bbd
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+    color: #006cc5
+}
+
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+    color: #002d61
+}
+
+.hljs-built_in,
+.hljs-symbol {
+    color: #a35623
+}
+
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+    color: #5d6a79
+}
+
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+    color: #22863a
+}
+
+.hljs-subst {
+    color: #2b3238
+}
+
+.hljs-section {
+    color: #004fc5;
+    font-weight: bold
+}
+
+.hljs-bullet {
+    color: #73530f
+}
+
+.hljs-emphasis {
+    color: #24282e;
+    font-style: italic
+}
+
+.hljs-strong {
+    color: #262b31;
+    font-weight: bold
+}
+
+.hljs-addition {
+    color: #1d7431;
+    background-color: #f0fff4
+}
+
+.hljs-deletion {
+    color: #bd0d18;
+    background-color: #ffeef0
+}
+
+table, th, td {
+    border-spacing: 0px;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid silver;
+    padding: 10px;
+}
+
+th {
+    background-color: #e7e7e7;
+}
+
+
+tr:nth-child(2n) {
+    background-color: #F5F5F5;
+}
+
+div.color {
+    font-family: monospace;
+    padding: 2px;
+    font-size: 88%;
+}
+
+div.color>b {
+    display: inline-block;
+    width: 30px;
+    height: 20px;
+    vertical-align: middle;
+    margin: 0px 8px 0px 0px;
+}
+
+/*----------------------------------------------------------------
+*/
+
+.menu {
+    border-bottom: 1px #c5c5c5 solid;
+    margin: 0px 5px 15px;
+    padding: 0px 0px 12px;
+}
+
+.menu a img {
+    display: inline-block;
+    vertical-align: -0.18em;
+    padding: 0px 10px 0px 0px;
+    height: 1.2em;
+    width: 1.2em;
+}
+
+.menu a>span {
+    display: inline-block;
+    vertical-align: -0.18em;
+    padding: 0px 10px 0px 0px;
+    height: 1.2em;
+    overflow: hidden;
+    max-width: 2em;
+}
+
+.menu a>span>span {
+    font-size: 1.4em;
+}
+
+.title {
+    font-family: "Rosarivo", serif;
+    text-decoration: none;
+    display: block;
+    margin: 10px auto 20px;
+    text-align: center;
+    font-size: 17px;
+    color: #444;
+}
+
+.title:hover {
+    color: #5c6b70;
+}

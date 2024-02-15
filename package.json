@@ -31,7 +31,8 @@
     "build": "npx tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json",
     "postbuild": "npx ts-node --swc scripts/postbuild.ts",
     "test-imports": "npx ts-node --swc test/test-imports/run-test.ts",
-    "build-web": "npx ts-node --swc scripts/build-web-index.ts"
+    "build-web": "npx ts-node --swc scripts/build-web-index.ts",
+    "prebuild-web": "npx ts-node --swc scripts/build-docs.ts"
   },
   "repository": {
     "type": "git",

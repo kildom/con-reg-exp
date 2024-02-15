@@ -111,9 +111,9 @@ console.log(...words);
 
 ### Learn more
 
-* [Go through the guide](guide.html)
+* [Learn basics with the tutorial](tutorial.html)
 
-* [Learn more about the syntax](syntax.html)
+* [Learn details from the documentation](docs.html)
 
 * [Experiment with web demo](demo.html)
 
