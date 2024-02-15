@@ -189,7 +189,7 @@ fs.mkdirSync(webDir, { recursive: true });
 for (let file of markdownFiles) {
     let html = convertMarkdown(file);
     let menu = convertMarkdown('_menu.md');
-    let all = html.matchAll(cre.cache`
+    let all = html.matchAll(cre.global.cache`
         "<h" level: digit
         lazy-repeat any
         "id=" ["] id: lazy-repeat any ["]
@@ -230,6 +230,6 @@ function convertMarkdown(fileName: string): string {
     let html = mdConverter.makeHtml(markdown);
     html = html
         .replace(/&amp;nbsp;/g, ' ')
-        .replace(cre`".md" lookahead ["#] `, '.html');
+        .replace(cre.global`".md" lookahead ["#] `, '.html');
     return html;
 }

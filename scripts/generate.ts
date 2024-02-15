@@ -21,7 +21,7 @@ import cre from '../src/con-reg-exp';
 console.log('\n');
 
 
-console.log(`const tokenRegExpBase = ${cre.first.sticky.legacy`
+console.log(`const tokenRegExpBase = ${cre.sticky.legacy`
 begin-of-text
 repeat whitespace
 {
@@ -60,7 +60,7 @@ or
 repeat whitespace
 `};\n`);
 
-console.log(`const tokenRegExpVMode = ${cre.first.sticky.legacy`
+console.log(`const tokenRegExpVMode = ${cre.sticky.legacy`
 begin-of-text
 repeat whitespace
 {
@@ -98,7 +98,7 @@ repeat whitespace
 `};\n`);
 
 
-console.log(`const quantifierRegExp = ${cre.first`
+console.log(`const quantifierRegExp = ${cre`
 begin-of-text
 optional lazy: ("lazy-" or "non-greedy-")
 {
@@ -137,7 +137,7 @@ const number = cre`
 
 const ws = cre`repeat whitespace`;
 
-console.log(cre.cache.first`
+console.log(cre.cache`
         begin-of-text ${ws}
         "[" ${ws}               // Begin of array
         optional {              // Array can be empty

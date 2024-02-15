@@ -24,7 +24,7 @@ const number = cre`
 
 const ws = cre`repeat whitespace`;
 
-const arrayOfNumbers = cre.first`
+const arrayOfNumbers = cre`
     begin-of-text ${ws}        // Trim leading whitespaces
     "[" ${ws}                  // Begin of array
     optional {                 // Optional, because array can be empty

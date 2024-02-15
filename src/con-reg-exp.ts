@@ -1092,7 +1092,7 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
         flags: {
             multiline: true,
             indices: false,
-            global: true,
+            global: false,
             ignoreCase: false,
             unicode: true,
             unicodeSets: false,
@@ -1237,7 +1237,7 @@ const proxyHandler = {
         let update: any;
         switch (prop) {
             case 'indices': update = { indices: true }; break;
-            case 'first': update = { global: false }; break;
+            case 'global': update = { global: true }; break;
             case 'ignoreCase': update = { ignoreCase: true }; break;
             case 'legacy': update = { unicode: false }; break;
             case 'unicode': update = { unicodeSets: true }; break;
@@ -1261,7 +1261,7 @@ export default function cre(str: TemplateStringsArray, ...values: any[]): RegExp
 
 
 cre.indices = new Proxy(() => ({ _id: 'indices', indices: true }), proxyHandler) as typeof cre;
-cre.first = new Proxy(() => ({ _id: 'first', global: false }), proxyHandler) as typeof cre;
+cre.global = new Proxy(() => ({ _id: 'global', global: true }), proxyHandler) as typeof cre;
 cre.ignoreCase = new Proxy(() => ({ _id: 'ignoreCase', ignoreCase: true }), proxyHandler) as typeof cre;
 cre.legacy = new Proxy(() => ({ _id: 'legacy', unicode: false }), proxyHandler) as typeof cre;
 cre.unicode = new Proxy(() => ({ _id: 'unicode', unicodeSets: true }), proxyHandler) as typeof cre;

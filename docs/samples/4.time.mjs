@@ -12,7 +12,7 @@ const minutesAndSoOn = cre.ignoreCase`
     }
 `;
 
-const time = cre.ignoreCase`
+const time = cre.global.ignoreCase`
     {
         // 12-hour format
         {

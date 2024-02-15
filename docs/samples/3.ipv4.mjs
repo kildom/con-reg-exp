@@ -15,7 +15,7 @@ const ipv4number = cre`
     }
 `;
 
-const ipv4address = cre`
+const ipv4address = cre.global`
     // Disallow anything behind that reassembles IPv4 addresses
     lookbehind not (digit or ".")
     // Four numbers separated by dot

@@ -4,7 +4,7 @@ import cre from 'con-reg-exp';
 
 // Convenient Regular Expression
 
-const number = cre`
+const number = cre.global`
     optional [+-]                   // Sign
     {
         at-least-1 digit            // Integral part

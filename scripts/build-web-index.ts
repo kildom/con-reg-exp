@@ -55,7 +55,7 @@ function markdown(markdown: string, simple: boolean): string {
     });
     let html = mdConverter.makeHtml(markdown);
     if (simple) {
-        html = html.replace(cre.ignoreCase`
+        html = html.replace(cre.global.ignoreCase`
             begin-of-text
             "<" tag: repeat [a-z] lazy-repeat any ">"
             group repeat any
@@ -67,12 +67,12 @@ function markdown(markdown: string, simple: boolean): string {
 
 function getHtmlId(markdownText: string): string {
     let x = markdown('#' + markdownText.trim(), false);
-    return x.match(cre.first`"id=\"" id: lazy-repeat any "\""`)?.groups?.id || '';
+    return x.match(cre`"id=\"" id: lazy-repeat any "\""`)?.groups?.id || '';
 }
 
 let indexText = fs.readFileSync('docs/index.md', 'utf8');
 
-let m = indexText.match(cre.first`
+let m = indexText.match(cre`
     menuText: lazy-repeat any
     begin-of-line "#"
     at-least-1 whitespace
@@ -83,7 +83,7 @@ let m = indexText.match(cre.first`
 
 let { menuText, title, subtitlesText, contentText } = m?.groups as { [key: string]: string; };
 templateData.title = markdown(title, true);
-templateData.copy = markdown(contentText.match(cre.first`
+templateData.copy = markdown(contentText.match(cre.cache`
     begin-of-line
     copy: {
         repeat not term
@@ -92,7 +92,7 @@ templateData.copy = markdown(contentText.match(cre.first`
     }`)?.groups?.copy?.trim() || '', true);
 
 function processMenu(menuText: string) {
-    let all = menuText.matchAll(cre`
+    let all = menuText.matchAll(cre.global.cache`
         begin-of-line repeat whitespace
         "*"
         at-least-1 whitespace
@@ -104,7 +104,7 @@ function processMenu(menuText: string) {
 }
 
 function processSubtitle(subtitlesText: string) {
-    let all = subtitlesText.matchAll(cre`
+    let all = subtitlesText.matchAll(cre.global.cache`
         begin-of-line repeat whitespace
         "*"
         at-least-1 whitespace
@@ -123,7 +123,7 @@ function processSubtitle(subtitlesText: string) {
 }
 
 function parseSections(text: string, level: number): { title: string, content: string }[] {
-    let all = text.matchAll(cre.cache`
+    let all = text.matchAll(cre.global.cache`
         begin-of-line ${level} "#"
         at-least-1 whitespace
         title: repeat (not term)
@@ -161,7 +161,7 @@ function processSamples() {
     for (let file of fs.readdirSync('docs/samples').sort()) {
         if (!file.endsWith('.mjs')) continue;
         let sourceCode = fs.readFileSync(`docs/samples/${file}`, 'utf-8');
-        let pattern = cre.first`
+        let pattern = cre`
             begin-of-text
             lazy-repeat any
             begin-of-line "//" title: repeat not term
@@ -174,7 +174,7 @@ function processSamples() {
         let title = m?.groups?.title?.trim() || '';
         let code = m?.groups?.code?.trim() || '';
         let out = execFileSync(process.execPath, [`docs/samples/${file}`], { encoding: 'utf8' });
-        m = out.match(cre.first`begin-of-line "Compiled:" regexp: repeat not term`);
+        m = out.match(cre`begin-of-line "Compiled:" regexp: repeat not term`);
         let regexp = m?.groups?.regexp?.trim() || '';
         let maxLineLength = code.split('\n').reduce((max, x) => Math.max(max, x.length), 50);
         let regexpLines = Math.ceil(regexp.length / maxLineLength);

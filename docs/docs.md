@@ -66,7 +66,7 @@ let items = input.split(cre.ignoreCase.unicode`"and"`);
 Flag name | RegExp<br/>equivalent | Description
 ----|----|----
 `indices` | [`d`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/hasIndices) | Generate indices.
-`first` | opposite of [`g`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) | *CRE* does global search by default. This flag disables global search.
+`global` | [`g`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) | Do global search.
 `ignoreCase` | [`i`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) | Case-insensitive.
 `legacy` | opposite of [`u`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) | *CRE* support unicode surrogate pairs by default. This flag brings up old behavior which interprets surrogate pair as two separate characters and also disables `\u{}` and `\p{}`.
 `unicode` | [`v`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicodeSets) | Upgraded unicode (v-mode).
@@ -194,7 +194,7 @@ let hasDigit = cre`digit`.test(input);
 Character class keyword can also be complemented with the `not` operator:
 
 ```javascriptwithcre
-let onlyDigits = input.replace(cre`not digit`, '');
+let onlyDigits = input.replace(cre.global`not digit`, '');
 ```
 
 ### Unicode Property
@@ -452,7 +452,7 @@ const number = cre`
 const ws = cre`repeat whitespace`;
 
 function validateJSONArrayOfNumbers(text) {
-    return cre.cache.first`
+    return cre.cache`
         begin-of-text ${ws}   // Trim leading whitespaces
         "[" ${ws}             // Begin of array
         optional {            // Array can be empty
