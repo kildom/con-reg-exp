@@ -27,39 +27,39 @@ hljs.registerLanguage('cre', (hljs) => {
             hljs.COMMENT(/\/\//, /$/),
             {
                 scope: 'literal',
-                begin: cre.ignoreCase`"\\" [rnt0]`,
+                begin: cre.ignoreCase`"\\", [rnt0]`,
             },
             {
                 scope: 'keyword',
                 begin: cre.ignoreCase`
-                    optional ("lazy-" or "non-greedy-")
+                    optional ("lazy-" or "non-greedy-");
                     {
-                        "optional"
-                    or
-                        optional "repeat-"
+                        "optional";
+                    } or {
+                        optional "repeat-";
                         {
-                            optional "at-"
-                            ("least-" or "most-")
-                            at-least-1 digit
-                        or
-                            at-least-1 digit
-                            optional ("-to-" at-least-1 digit)
+                            optional "at-";
+                            "least-" or "most-";
+                            at-least-1 digit;
+                        } or {
+                            at-least-1 digit;
+                            optional ("-to-", at-least-1 digit);
                         }
-                        optional ("-time" optional "s")
-                    or
-                        "repeat"
+                        optional ("-time", optional "s");
+                    } or {
+                        "repeat";
                     }`,
             },
             {
                 scope: 'name',
-                begin: cre`([a-zA-Z_] repeat [a-zA-Z0-9_]) ":"`,
+                begin: cre`[a-zA-Z_], repeat [a-zA-Z0-9_], ":"`,
             },
             {
                 scope: 'string',
                 begin: /"/,
                 end: /"/,
                 contains: [
-                    { begin: cre`"\\" any` },
+                    { begin: cre`"\\", any` },
                     { scope: 'subst', begin: /\${/, end: /}/ },
                 ],
             },
@@ -68,7 +68,7 @@ hljs.registerLanguage('cre', (hljs) => {
                 begin: /'/,
                 end: /'/,
                 contains: [
-                    { begin: cre`"\\" any` },
+                    { begin: cre`"\\", any` },
                     { scope: 'subst', begin: /\${/, end: /}/ },
                 ],
             },
@@ -82,7 +82,7 @@ hljs.registerLanguage('cre', (hljs) => {
                 begin: /\[/,
                 end: /\]/,
                 contains: [
-                    { begin: cre`"\\" any` },
+                    { begin: cre`"\\", any` },
                     { scope: 'subst', begin: /\${/, end: /}/ },
                 ],
             },
@@ -94,9 +94,13 @@ hljs.registerLanguage('cre', (hljs) => {
             {
                 scope: 'type',
                 begin: cre.ignoreCase`
-                    ("end" or "start" or "begin") "-of-" ("text" or "line")
-                    or "word-bound" optional "ary"
-                    or "look" optional "-" ("ahead" or "behind")
+                    {
+                        "end" or "start" or "begin", "-of-", "text" or "line";
+                    } or {
+                        "word-bound", optional "ary";
+                    } or {
+                        "look", optional "-", "ahead" or "behind";
+                    }
                     `,
             }
         ]
@@ -121,15 +125,15 @@ let jscre = {
         },
         {
             scope: 'regexp',
-            begin: cre`"/" lookahead not "/"`,
+            begin: cre`"/", lookahead not "/"`,
             end: /\/[gimuvsy]*/,
             contains: [
-                { begin: cre`"\\" any` },
+                { begin: cre`"\\", any` },
                 {
                     begin: /\[/,
                     end: /\]/,
                     contains: [
-                        { begin: cre`"\\" any` },
+                        { begin: cre`"\\", any` },
                     ],
                 },
             ],
@@ -190,13 +194,13 @@ for (let file of markdownFiles) {
     let html = convertMarkdown(file);
     let menu = convertMarkdown('_menu.md');
     let all = html.matchAll(cre.global.cache`
-        "<h" level: digit
-        lazy-repeat any
-        "id=" ["] id: lazy-repeat any ["]
-        lazy-repeat any
-        ">"
-        title: lazy-repeat any
-        "</h" match<level>
+        "<h", level: digit;
+        lazy-repeat any;
+        "id=" ["], id: lazy-repeat any, ["];
+        lazy-repeat any;
+        ">";
+        title: lazy-repeat any;
+        "</h", match<level>;
     `);
     let toc: TocEntry[] = [];
     let tocStack: TocEntry[][] = [toc];
@@ -230,6 +234,6 @@ function convertMarkdown(fileName: string): string {
     let html = mdConverter.makeHtml(markdown);
     html = html
         .replace(/&amp;nbsp;/g, ' ')
-        .replace(cre.global`".md" lookahead ["#] `, '.html');
+        .replace(cre.global`".md", lookahead ["#]`, '.html');
     return html;
 }

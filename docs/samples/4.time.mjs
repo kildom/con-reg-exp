@@ -5,10 +5,10 @@ import cre from 'con-reg-exp';
 // Convenient Regular Expression
 
 const minutesAndSoOn = cre.ignoreCase`
-    ":" [0-5] digit                     // Minutes
+    ":", [0-5], digit;                    // Minutes
     optional {
-        ":" [0-5] digit                 // Seconds
-        optional ("." at-least-1 digit) // Fraction of a second
+        ":", [0-5], digit;                // Seconds
+        optional (".", at-least-1 digit); // Fraction of a second
     }
 `;
 
@@ -16,21 +16,21 @@ const time = cre.global.ignoreCase`
     {
         // 12-hour format
         {
-            "1" [0-2]                   // Range 10…12
-        or
-            optional "0" digit          // Range 0…9
+            "1", [0-2];                 // Range 10…12
+        } or {
+            optional "0", digit;        // Range 0…9
         }
-        ${minutesAndSoOn}
-        repeat whitespace               // Allow any whitespaces before AM/PM
-        ("AM" or "PM")
-    or
+        ${minutesAndSoOn};
+        repeat whitespace;              // Allow any whitespaces before AM/PM
+        "AM" or "PM";
+    } or {
         // 24-hour format
         {
-            "2" [0-3]                   // Range 20…23
-        or
-            optional [01] digit         // Range 0…19
+            "2", [0-3];                 // Range 20…23
+        } or {
+            optional [01], digit;       // Range 0…19
         }
-        ${minutesAndSoOn}
+        ${minutesAndSoOn};
     }
 `;
 

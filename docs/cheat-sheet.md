@@ -21,7 +21,8 @@ Operator | Name | Precedence | Comment
 `N‑times` | Exact quantifier | 3 | exactly N times
 `N‑to‑M‑times` | Range quantifier | 3 | N to M times
 &nbsp; | **BINARY<br>OPERATORS**
-` ` | Concatenation | 2 | Operands next to each other without any conjunction characters.
-`or` | Disjunction | 1
+`or` | Disjunction | 2
+`,` | Comma | 1 | Suggested for separating expressions in a single line.
+`;` | Semicolon | 1 | Suggested for separating expressions between lines (at the end of line).
 
 TODO: write more

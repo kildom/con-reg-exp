@@ -103,7 +103,7 @@ const number = cre`
     {
         at-least-1 digit            // Integral part
         optional ("." repeat digit) // Optional factional part
-    or
+    } or {
         "." at-least-1 digit        // Variant with only fractional part
     }
     optional {                      // Optional exponent part

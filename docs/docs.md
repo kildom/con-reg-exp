@@ -116,11 +116,11 @@ let hasMath = cre`
     /* The following expression will match
      * a simple math with two integers.
      */
-    at-least-1 digit   // First integer
-    repeat whitespace
-    [*/+-]             // Operator
-    repeat whitespace
-    at-least-1 digit   // Second integer
+    at-least-1 digit;   // First integer
+    repeat whitespace;
+    [*/+-];             // Operator
+    repeat whitespace;
+    at-least-1 digit;   // Second integer
 `.test(input);
 ```
 
@@ -202,7 +202,7 @@ let onlyDigits = input.replace(cre.global`not digit`, '');
 Character class that matches specific unicode property uses `property` (alias `prop`) keyword followed by actual property enclosed in `< >`.
 
 ```javascriptwithcre
-let hasNonEnglishLetters = cre`lookahead not [A-Z] prop<Letter>`.test(input);
+let hasNonEnglishLetters = cre`lookahead not [A-Z], prop<Letter>`.test(input);
 ```
 
 You can also specify unicode properties in character class `[\p{...}]`.
@@ -212,12 +212,14 @@ If the `unicode` flag is set, it can be used to match properties of strings, ins
 
 ## Quantifiers
 
+// TODO: Maybe stop using node, but instead maybe simply "expression"?
+
 Quantifiers tells how many times the following node must match.
 Those are equivalents of `?`, `*`, `+`, `{n,m}` in RegExp notation.
 For example:
 
 ```javascriptwithcre
-let numberLessThan100 = cre`optional [1-9] digit`;
+let numberLessThan100 = cre`optional [1-9], digit`;
 ```
 
 Quantifier is a keyword with flexible syntax. Some parts of it are optional,
@@ -240,25 +242,57 @@ It will make the quantifier lazy (non-greedy) which is equivalent of adding `?` 
 For example:
 
 ```javascriptwithcre
-let matchQuotedText = cre`["] lazy-repeat any ["]`;
+let matchQuotedText = cre`["], lazy-repeat any, ["]`;
 ```
 
 ## Flow and grouping
 
 ### Sequence
 
+// TODO: maybe call it differently?
+
 Literals, character classes, and also other nodes described below can be
-put next to each other to provide sequence of matches. For example:
+separated by comma or semicolon (`,` or `;`) to provide sequence of matches. For example:
 
 ```javascriptwithcre
-let hasGrayInAnyForm = cre`"gr" [ae] "y"`.test(input);
+let hasGrayInAnyForm = cre`"gr", [ae], "y"`.test(input);
+```
+
+The comma and semicolon have the same meaning, but for better readability:
+
+* use comma to separate expressions in a single line, for example:
+
+    ```javascriptwithcre
+    let matchNumber = cre`optional [+-], at-least-1 digit`;
+    ```
+
+* use semicolon to separate expressions between lines by placing it at the end of a line, for example:
+
+    ```javascriptwithcre
+    let matchNumber = cre`
+        optional [+-];
+        at-least-1 digit;
+    `;
+    ```
+
+Empty expression between separators are ignored.
+Separator after closing bracket or parenthesis is optional, for example:
+
+```javascriptwithcre
+let addressWithUserName = cre`
+    optional {
+        lazy-repeat any;
+        "@"; // here we have an empty expression which will be ignored
+    } // no need to for a semicolon
+    repeat any;
+`
 ```
 
 ### Operator `or`
 
 Use `or` operator to specify two or more alternatives.
-It takes entire sequence (not just nearest node) on the right and on the left and makes
-alternative of them.
+It makes an alternative of expressions on the left and right.
+Multiple `or`s can be used to make an alternative of more expressions.
 
 The same example as above, but using `or`:
 
@@ -266,20 +300,44 @@ The same example as above, but using `or`:
 let hasGrayInAnyForm = cre`"gray" or "grey"`.test(input);
 ```
 
+All prefix (unary) operators have higher precedence, so `or` operator is applied after all
+prefixes on both sides. If left or right hand expression contains multiple prefix operators surround it with
+the parentheses for better readability. For example:
+
+```javascriptwithcre
+// This is more readable:
+let pattern = cre`(other: lazy-repeat not digit) or (optional digit)`;
+// than that:
+let pattern = cre`other: lazy-repeat not digit or optional digit`;
+// but both generates exactly the same result.
+```
+
 ### Parentheses `( )` and braces `{ }`
 
 Parentheses `( )` and braces `{ }` works exactly the same.
 They controls the precedence of evaluation.
 
-The same example as above, but with parentheses `( )`:
-
-```javascriptwithcre
-let hasGrayInAnyForm = cre`"gr" ("a" or "e") "y"`.test(input);
-```
-
 In theory, you can exchange `( )` and `{ }` however you want,
 but for clarity, you should use `( )` to group nodes in single line, and
 `{ }` for groups that span multiple lines.
+
+The same example as above, but with parentheses `( )`:
+
+```javascriptwithcre
+let hasDarkGrayInAnyForm = cre`(optional "dark ", "gray") or (optional "dark ", "grey")`.test(input);
+```
+
+Or, multi-line variant:
+
+```javascriptwithcre
+let hasDarkGrayInAnyForm = cre`
+    {
+        optional "dark ", "gray";
+    } or {
+        optional "dark ", "grey"
+    }
+    `.test(input);
+```
 
 ### Operator `not`
 
@@ -309,13 +367,13 @@ Keyword | RegExp equivalent | Description | Aliases
 For example:
 
 ```javascriptwithcre
-let isJPEG = cre.ignoreCase`(".jpeg" or ".jpg") end-of-text`.test(fileName);
+let isJPEG = cre.ignoreCase`(".jpeg" or ".jpg"), end-of-text`.test(fileName);
 ```
 
 Boundary assertion can be complemented with the `not` operator, for example:
 
 ```javascriptwithcre
-let tabInTheMiddleOfLine = cre`not begin-of-line "\t"`.test(fileName);
+let tabInTheMiddleOfLine = cre`not begin-of-line, "\t"`.test(fileName);
 ```
 
 ### Look assertion
@@ -340,9 +398,9 @@ It is a name with colon at the end `name:`.
 
 ```javascriptwithcre
 let match = input.match(cre`
-    user: at-least-1 [a-zA-Z_.-]
-    "@"
-    address: at-least-1 [a-zA-Z_.-]
+    user: at-least-1 [a-zA-Z_.-];
+    "@";
+    address: at-least-1 [a-zA-Z_.-];
 `);
 ```
 
@@ -363,9 +421,9 @@ capturing group name or index enclosed by `< >`.
 
 ```javascriptwithcre
 let hasRepeatingWords = cre`
-    firstWord: at-least-1 word-char
-    at-least-1 not word-char
-    match<firstWord>
+    firstWord: at-least-1 word-char;
+    at-least-1 not word-char;
+    match<firstWord>;
 `.test(input);
 ```
 
@@ -382,11 +440,9 @@ escape it before using, the *CRE* will handle that for you.
 ```javascriptwithcre
 function hasVerbInAnyForm(text, verb) {
     return cre.ignoreCase`
-        word-boundary
-        {
-            "${verb}" or "${verb}s" or "${verb}es"
-        }
-        word-boundary
+        word-boundary;
+        "${verb}" or "${verb}s" or "${verb}es";
+        word-boundary;
     `.test(text);
 }
 ```
@@ -408,9 +464,9 @@ you must specify each character in the interpolated string - `abcdef`.
 function isInteger(text, isHex) {
     const additionalCharacters = isHex ? "abcdef" : "";
     return cre.ignoreCase`
-        start-of-text
-        at-least-1 [0-9${additionalCharacters}]
-        end-of-text
+        start-of-text;
+        at-least-1 [0-9${additionalCharacters}];
+        end-of-text;
     `.test(text);
 }
 ```
@@ -435,17 +491,18 @@ There is a slide difference between interpolating *CRE* expression and a string:
 
 ```javascriptwithcre
 const number = cre`
-    optional [+-]                   // Sign
+    optional [+-];                   // Sign
     {
-        at-least-1 digit            // Integral part
-        optional ("." repeat digit) // Optional factional part
+        at-least-1 digit;            // Integral part
+        optional (".", repeat digit);// Optional factional part
     or
-        "." at-least-1 digit        // Variant with only fractional part
+        ".";                         // Variant with only fractional part
+        at-least-1 digit;
     }
-    optional {                      // Optional exponent part
-        [eE]
-        optional [+-]
-        at-least-1 digit
+    optional {                       // Optional exponent part
+        [eE];
+        optional [+-];
+        at-least-1 digit;
     }
 `;
 
@@ -453,17 +510,17 @@ const ws = cre`repeat whitespace`;
 
 function validateJSONArrayOfNumbers(text) {
     return cre.cache`
-        begin-of-text ${ws}   // Trim leading whitespaces
-        "[" ${ws}             // Begin of array
-        optional {            // Array can be empty
-            repeat {          // Numbers with trailing comma
-                ${number} ${ws}
-                "," ${ws}
+        begin-of-text, ${ws};  // Trim leading whitespaces
+        "[", ${ws};            // Begin of array
+        optional {             // Array can be empty
+            repeat {           // Numbers with trailing comma
+                ${number}, ${ws};
+                ",", ${ws};
             }
-            ${number} ${ws}   // Last number has no comma
+            ${number}, ${ws};  // Last number has no comma
         }
-        "]" ${ws}
-        end-of-text
+        "]", ${ws};
+        end-of-text;
     `.test(text);
 }
 ```
@@ -478,9 +535,9 @@ function validateJSONArrayOfNumbers(text) {
 function validateWord(text, allowEmpty) {
     let quantifier = allowEmpty ? 'repeat' : 'at-least-1';
     return cre.cache`
-        begin-of-text
-        ${quantifier} word-character
-        end-of-text
+        begin-of-text;
+        ${quantifier} word-character;
+        end-of-text;
     `.test(text);
 }
 ```

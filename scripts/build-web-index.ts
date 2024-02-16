@@ -56,10 +56,10 @@ function markdown(markdown: string, simple: boolean): string {
     let html = mdConverter.makeHtml(markdown);
     if (simple) {
         html = html.replace(cre.global.ignoreCase`
-            begin-of-text
-            "<" tag: repeat [a-z] lazy-repeat any ">"
-            group repeat any
-            "</" match<tag> ">" end-of-text
+            begin-of-text;
+            "<", tag: repeat [a-z], lazy-repeat any, ">";
+            group repeat any;
+            "</", match<tag>, ">", end-of-text;
             `, '$2');
     }
     return html;
@@ -67,36 +67,37 @@ function markdown(markdown: string, simple: boolean): string {
 
 function getHtmlId(markdownText: string): string {
     let x = markdown('#' + markdownText.trim(), false);
-    return x.match(cre`"id=\"" id: lazy-repeat any "\""`)?.groups?.id || '';
+    return x.match(cre`"id=\"", id: lazy-repeat any, "\""`)?.groups?.id || '';
 }
 
 let indexText = fs.readFileSync('docs/index.md', 'utf8');
 
 let m = indexText.match(cre`
-    menuText: lazy-repeat any
-    begin-of-line "#"
-    at-least-1 whitespace
-    title: repeat (not term)
-    subtitlesText: lazy-repeat any
-    contentText: (begin-of-line "#" repeat any)
+    menuText: lazy-repeat any;
+    begin-of-line, "#";
+    at-least-1 whitespace;
+    title: repeat (not term);
+    subtitlesText: lazy-repeat any;
+    contentText: (begin-of-line, "#", repeat any);
 `);
 
 let { menuText, title, subtitlesText, contentText } = m?.groups as { [key: string]: string; };
 templateData.title = markdown(title, true);
 templateData.copy = markdown(contentText.match(cre.cache`
-    begin-of-line
+    begin-of-line;
     copy: {
-        repeat not term
-        "Copyright"
-        repeat not term
+        repeat not term;
+        "Copyright";
+        repeat not term;
     }`)?.groups?.copy?.trim() || '', true);
 
 function processMenu(menuText: string) {
     let all = menuText.matchAll(cre.global.cache`
-        begin-of-line repeat whitespace
-        "*"
-        at-least-1 whitespace
-        item: repeat not term
+        begin-of-line;
+        repeat whitespace;
+        "*";
+        at-least-1 whitespace;
+        item: repeat not term;
     `);
     for (let item of [...all].map(m => m.groups!.item as string)) {
         templateData.menu.push(markdown(item, true));
@@ -105,10 +106,11 @@ function processMenu(menuText: string) {
 
 function processSubtitle(subtitlesText: string) {
     let all = subtitlesText.matchAll(cre.global.cache`
-        begin-of-line repeat whitespace
-        "*"
-        at-least-1 whitespace
-        subtitle: repeat not term
+        begin-of-line;
+        repeat whitespace;
+        "*";
+        at-least-1 whitespace;
+        subtitle: repeat not term;
     `);
     let list = [...all].map(m => m.groups!.subtitle as string);
     let ending = list[0];
@@ -124,17 +126,14 @@ function processSubtitle(subtitlesText: string) {
 
 function parseSections(text: string, level: number): { title: string, content: string }[] {
     let all = text.matchAll(cre.global.cache`
-        begin-of-line ${level} "#"
-        at-least-1 whitespace
-        title: repeat (not term)
-        content: lazy-repeat any
-        {
-            lookahead {
-                begin-of-line
-                ${`1-to-${level}`} "#" at-least-1 whitespace
-            }
-        or
-            end-of-text
+        begin-of-line, ${level} "#";
+        at-least-1 whitespace;
+        title: repeat not term;
+        content: lazy-repeat any;
+        end-of-text or lookahead {
+            begin-of-line;
+            ${`1-to-${level}`} "#";
+            at-least-1 whitespace;
         }
     `);
     return [...all].map(m => ({ title: m.groups!.title, content: m.groups!.content }));
@@ -162,19 +161,19 @@ function processSamples() {
         if (!file.endsWith('.mjs')) continue;
         let sourceCode = fs.readFileSync(`docs/samples/${file}`, 'utf-8');
         let pattern = cre`
-            begin-of-text
-            lazy-repeat any
-            begin-of-line "//" title: repeat not term
-            lazy-repeat any
-            begin-of-line "// Convenient Regular Expression"
-            code: lazy-repeat any
-            begin-of-line "// Usage"
+            begin-of-text;
+            lazy-repeat any;
+            begin-of-line, "//", title: repeat not term;
+            lazy-repeat any;
+            begin-of-line, "// Convenient Regular Expression";
+            code: lazy-repeat any;
+            begin-of-line, "// Usage";
         `;
         let m = sourceCode.match(pattern);
         let title = m?.groups?.title?.trim() || '';
         let code = m?.groups?.code?.trim() || '';
         let out = execFileSync(process.execPath, [`docs/samples/${file}`], { encoding: 'utf8' });
-        m = out.match(cre`begin-of-line "Compiled:" regexp: repeat not term`);
+        m = out.match(cre`begin-of-line, "Compiled:", regexp: repeat not term`);
         let regexp = m?.groups?.regexp?.trim() || '';
         let maxLineLength = code.split('\n').reduce((max, x) => Math.max(max, x.length), 50);
         let regexpLines = Math.ceil(regexp.length / maxLineLength);

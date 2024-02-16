@@ -5,27 +5,27 @@ import cre from 'con-reg-exp';
 // Convenient Regular Expression
 const ipv4number = cre`
     {
-        "25" [0-5]             // Range 250…255
-    or
-        "2" [0-4] digit        // Range 240…249
-    or
-        "1" digit digit        // Range 100…199
-    or
-        optional [1-9] digit   // Range 0…99
+        "25", [0-5];           // Range 250…255
+    } or {
+        "2", [0-4], digit;     // Range 240…249
+    } or {
+        "1", digit, digit;     // Range 100…199
+    } or {
+        optional [1-9], digit; // Range 0…99
     }
 `;
 
 const ipv4address = cre.global`
     // Disallow anything behind that reassembles IPv4 addresses
-    lookbehind not (digit or ".")
+    lookbehind not (digit or ".");
     // Four numbers separated by dot
-    ${ipv4number}
+    ${ipv4number};
     3-times {
-        "."
-        ${ipv4number}
+        ".";
+        ${ipv4number};
     }
     // Disallow anything ahead that reassembles IPv4 addresses
-    lookahead not (digit or ".")
+    lookahead not (digit or ".");
 `;
 
 // Usage

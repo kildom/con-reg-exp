@@ -69,96 +69,93 @@ let grammar = {
                     "include": "#comment"
                 },
                 {
-                    "match": cre`([a-zA-Z_] repeat [a-zA-Z0-9_]) ":"`,
+                    "match": cre`([a-zA-Z_], repeat [a-zA-Z0-9_]), ":"`,
                     "name": "entity.name.function",
                 },
                 {
                     "match": cre.ignoreCase`
-                        word-boundary
-                        {
-                            optional ("lazy-" or "non-greedy-")
-                            {
-                                "optional"
-                            or
-                                optional "repeat-"
+                        word-boundary;
+                        "match" or "group" or "not" or "or" or {
+                            optional ("lazy-" or "non-greedy-");
+                            "optional" or "repeat" or {
+                                optional "repeat-";
                                 {
-                                    optional "at-"
-                                    ("least-" or "most-")
-                                    at-least-1 digit
-                                or
-                                    at-least-1 digit
-                                    optional ("-to-" at-least-1 digit)
+                                    optional "at-";
+                                    "least-" or "most-";
+                                    at-least-1 digit;
+                                } or {
+                                    at-least-1 digit;
+                                    optional ("-to-", at-least-1 digit);
                                 }
-                                optional ("-time" optional "s")
-                            or
-                                "repeat"
+                                optional ("-time", optional "s");
                             }
-                        or "match"
-                        or "group"
-                        or "not"
-                        or "or"
                         }
-                        word-boundary
+                        word-boundary;
                         `,
                     "name": "storage.type"
                 },
                 {
-                    "match": cre`["] lazy-repeat ("\\" any or any) ["] `,
+                    "match": cre`["], lazy-repeat (("\\", any) or any), ["] `,
                     "name": "string.quoted.double"
                 },
                 {
                     "match": cre.ignoreCase`
-                        word-boundary {
-                            ("end" or "start" or "begin") "-of-" ("text" or "line")
-                            or "word-bound" optional "ary"
-                            or "look" optional "-" ("ahead" or "behind")
-                        } word-boundary
+                        word-boundary;
+                        {
+                            "end" or "start" or "begin";
+                            "-of-";
+                            "text" or "line";
+                        } or {
+                            "word-bound", optional "ary";
+                        } or {
+                            "look";
+                            optional "-";
+                            "ahead" or "behind";
+                        }
+                        word-boundary;
                         `,
                     "name": "keyword.control"
                 },
                 {
                     "match": cre.ignoreCase`
-                        word-boundary
                         {
+                            word-boundary;
                             "any"
                             or "digit"
-                            or "white" optional "-" "space"
-                            or "word-char" optional "acter"
+                            or ("white", optional "-", "space")
+                            or ("word-char", optional "acter")
                             or "nl"
                             or "new-line"
                             or "lf"
                             or "line-feed"
                             or "cr"
                             or "carriage-return"
-                            or "tab" optional "ulation"
-                            or "nul" optional "l"
-                            or "sp" optional "ace"
+                            or ("tab", optional "ulation")
+                            or ("nul", optional "l")
+                            or ("sp", optional "ace")
                             or "nbsp"
-                            or optional "line-" "term" optional "inator"
-                            or "prop" optional "erty"
-                        }
-                        word-boundary
-                    or
-                        {
+                            or (optional "line-", "term", optional "inator")
+                            or ("prop", optional "erty");
+                        } or {
                             "\\n"
                             or "\\r"
                             or "\\t"
-                            or "\\0"
+                            or "\\0";
                         }
-                        word-boundary
+                        word-boundary;
                     `,
                     "name": "support.class"
                 },
                 {
-                    "match": cre`"[" lazy-repeat ("\\" any or any) "]"`,
+                    "match": cre`"[", lazy-repeat (("\\" any) or any), "]"`,
                     "name": "string.other"
                 },
                 {
-                    "match": cre`"<" lazy-repeat any ">"`,
+                    "match": cre`"<", lazy-repeat any, ">"`,
                     "name": "entity.name.function",
                 },
                 {
-                    "match": cre`"\${" lazy-repeat any "}"`,
+                    "match": cre`"\${", lazy-repeat any, "}"`,
                     "name": "string.regexp",
                 }
             ]

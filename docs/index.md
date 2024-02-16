@@ -100,7 +100,7 @@ If you are using an HTML tag, the `cre` symbol is globally available and you don
 ```javascriptwithcre
 const inputText = "Hello World!!!";
 
-const pattern = cre`
+const pattern = cre.global`
     at-least-1 word-char
 `;
 

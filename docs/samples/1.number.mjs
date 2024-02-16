@@ -5,17 +5,18 @@ import cre from 'con-reg-exp';
 // Convenient Regular Expression
 
 const number = cre.global`
-    optional [+-]                   // Sign
+    optional [+-];                    // Sign
     {
-        at-least-1 digit            // Integral part
-        optional ("." repeat digit) // Optional factional part
-    or
-        "." at-least-1 digit        // Variant with only fractional part
+        at-least-1 digit;             // Integral part
+        optional (".", repeat digit); // Optional factional part
+    } or {
+        ".";
+        at-least-1 digit;             // Variant with only fractional part
     }
-    optional {                      // Optional exponent part
-        [eE]
-        optional [+-]
-        at-least-1 digit
+    optional {                        // Optional exponent part
+        [eE];
+        optional [+-];
+        at-least-1 digit;
     }
 `;
 

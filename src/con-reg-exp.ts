@@ -94,9 +94,9 @@ class TokenizerError extends Error {
 // #region Generated Regular Expressions
 
 
-const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)(?=[\r\n\u2028\u2029]|$))\s*/sy;
+const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)(?=[\r\n\u2028\u2029]|$))\s*/sy;
 
-const tokenRegExpVMode = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>"(?:\\.|.)*?")|<(?<identifier>.*?)>|(?<characterClassVMode>\[)(?<complement>\^)?|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)(?=[\r\n\u2028\u2029]|$))\s*/sy;
+const tokenRegExpVMode = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|(?<characterClassVMode>\[)(?<complement>\^)?|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)(?=[\r\n\u2028\u2029]|$))\s*/sy;
 
 const quantifierRegExp = /^(?<lazy>lazy-|non-greedy-)?(?:(?<optional>optional)|(?<repeat>repeat)|(?:repeat-)?(?:(?:at-)?(?:(?<least>least-)|(?<most>most-))(?<count>\d+)|(?<min>\d+)(?:-to-(?<max>\d+))?)(?:-times?)?)$/su;
 
@@ -158,6 +158,8 @@ enum TokenType {
     Begin,
     /** Parentheses or braces end: `)` or `}` */
     End,
+    /** Separator: `,` or `;` */
+    Separator,
     /** Internal token used to indicate beginning of the interpolation. */
     InterpolationBegin,
     /** Internal token used to indicate end of the interpolation. */
@@ -196,7 +198,7 @@ interface InterpolationBeginToken {
  * Token that does not provide additional data.
  */
 interface EmptyToken {
-    type: TokenType.Begin | TokenType.End | TokenType.InterpolationEnd;
+    type: TokenType.Begin | TokenType.End | TokenType.Separator | TokenType.InterpolationEnd;
     position: number;
 }
 
@@ -211,6 +213,7 @@ type Token = TextToken | CharacterClassToken | EmptyToken | InterpolationBeginTo
 interface TokenRegExpGroups {
     begin?: string;
     end?: string;
+    separator?: string;
     label?: string;
     keyword?: string;
     literal?: string;
@@ -278,6 +281,9 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
         } else if (groups.end !== undefined) {
             // Parentheses or braces end.
             result.push({ position, type: TokenType.End });
+        } else if (groups.separator !== undefined) {
+            // Separator.
+            result.push({ position, type: TokenType.Separator });
         } else if (groups.label !== undefined) {
             // Label (capturing group begin).
             result.push({ position, type: TokenType.Label, text: groups.label });
@@ -413,6 +419,10 @@ class Context {
 
     public peek(): Token | undefined {
         return this.info.tokens[this.index];
+    }
+
+    public peekPrev(): Token | undefined {
+        return this.info.tokens[this.index - 1];
     }
 
     public error(token: Token | undefined, message: string): Error {
@@ -975,8 +985,34 @@ class Quantifier extends Node {
 const verboseRegExpInfo = Symbol('verboseRegExpInfo');
 
 
+function parseList(ctx: Context): Node {
+    let items: Node[] = [];
+    let next = ctx.peek();
+    while (next && next.type !== TokenType.End) {
+        if (next.type === TokenType.Separator) {
+            ctx.read();
+            next = ctx.peek();
+        } else {
+            let item = parseOr(ctx);
+            next = ctx.peek();
+            if (next && next.type !== TokenType.Separator && ctx.peekPrev()?.type !== TokenType.End) {
+                ctx.error(next, 'Expecting separator')
+            }
+            items.push(item);
+        }
+    }
+    if (items.length === 0) {
+        return new List();
+    } else if (items.length === 1) {
+        return items[0];
+    } else {
+        return new List(items);
+    }
+}
+
+
 function parseOr(ctx: Context): Node {
-    let left = parseList(ctx);
+    let left = parseLeaf(ctx);
     let next = ctx.peek();
     if (next?.type !== TokenType.Keyword || next.text.toLowerCase() !== 'or') {
         return left;
@@ -999,24 +1035,6 @@ function parseOr(ctx: Context): Node {
 }
 
 
-function parseList(ctx: Context): Node {
-    let items: Node[] = [];
-    let next = ctx.peek();
-    while (next && next.type !== TokenType.End
-        && !(next?.type === TokenType.Keyword && next.text.toLowerCase() === 'or')
-    ) {
-        items.push(parseLeaf(ctx));
-        next = ctx.peek();
-    }
-    if (items.length === 0) {
-        return new List();
-    } else if (items.length === 1) {
-        return items[0];
-    } else {
-        return new List(items);
-    }
-}
-
 
 function parseLeaf(ctx: Context): Node {
 
@@ -1024,7 +1042,7 @@ function parseLeaf(ctx: Context): Node {
 
     switch (token?.type) {
         case TokenType.Begin: {
-            let a = parseOr(ctx);
+            let a = parseList(ctx);
             let end = ctx.read();
             if (end?.type !== TokenType.End) {
                 throw ctx.error(token, 'Unterminated bracket.');
@@ -1035,6 +1053,8 @@ function parseLeaf(ctx: Context): Node {
             throw ctx.error(undefined, 'Unexpected end of expression.');
         case TokenType.End:
             throw ctx.error(token, 'Unexpected closing bracket.');
+        case TokenType.Separator:
+            throw ctx.error(token, 'Unexpected separator.');
         case TokenType.Identifier:
             throw ctx.error(token, `Unexpected identifier "<${token.text}>".`);
         case TokenType.InterpolationBegin:
@@ -1112,7 +1132,7 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
         throw err;
     }
 
-    let expr = parseOr(ctx);
+    let expr = parseList(ctx);
     let pattern = expr.generate();
     let regexpFlags = 's';
     if (ctx.info.flags.indices) regexpFlags += 'd';

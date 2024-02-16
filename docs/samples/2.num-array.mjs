@@ -5,37 +5,37 @@ import cre from 'con-reg-exp';
 // Convenient Regular Expression
 
 const number = cre`
-    optional "-"                // Sign
+    optional "-";               // Sign
     {                           // Integral part
-        "0"                     // Zero is special case
-    or
-        [1-9] repeat digit      // Everything above zero
+        "0";                    // Zero is special case
+    } or {
+        [1-9], repeat digit;    // Everything above zero
     }
     optional {                  // Optional factional part
-        "."
-        at-least-1 digit
+        ".";
+        at-least-1 digit;
     }
     optional {                  // Optional exponent part
-        [eE]
-        optional [+-]
-        at-least-1 digit
+        [eE];
+        optional [+-];
+        at-least-1 digit;
     }
 `;
 
 const ws = cre`repeat whitespace`;
 
 const arrayOfNumbers = cre`
-    begin-of-text ${ws}        // Trim leading whitespaces
-    "[" ${ws}                  // Begin of array
+    begin-of-text, ${ws};      // Trim leading whitespaces
+    "[", ${ws};                // Begin of array
     optional {                 // Optional, because array can be empty
         repeat {               // Numbers with trailing comma
-            ${number} ${ws}
-            "," ${ws}
+            ${number}, ${ws};
+            ",", ${ws};
         }
-        ${number} ${ws}        // Last number has no comma
+        ${number}, ${ws};      // Last number has no comma
     }
-    "]" ${ws}                  // End of array
-    end-of-text
+    "]", ${ws};                // End of array
+    end-of-text;
 `;
 
 // Usage
