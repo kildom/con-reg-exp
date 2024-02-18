@@ -5,6 +5,7 @@
 /tsconfig.*
 /*.tgz
 /*.tar.gz
+/*.zip
 /dist/default/
 /dist/browser/
 /temp/
