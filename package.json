@@ -1,6 +1,6 @@
 {
   "name": "con-reg-exp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Convenient Regular Expressions - a different approach to the regular expressions syntax.",
   "main": "./dist/cjs/con-reg-exp.cjs",
   "module": "./dist/esm/con-reg-exp.mjs",
@@ -15,6 +15,7 @@
     "test": "test"
   },
   "devDependencies": {
+    "@swc/core": "^1.4.1",
     "@types/underscore": "^1.11.15",
     "esbuild": "^0.20.0",
     "showdown": "^2.1.0",
@@ -22,7 +23,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "underscore": "^1.13.6",
-    "webpack": "^5.90.0",
+    "webpack": "^5.90.2",
     "webpack-cli": "^5.1.4"
   },
   "scripts": {
