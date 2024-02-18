@@ -40,7 +40,12 @@ You can make `cre` available globally in your HTML page by using `<script>` tag:
 You can download the script from the [releases page](https://github.com/kildom/con-reg-exp/releases/).
 You can also download [latest version](https://github.com/kildom/con-reg-exp/releases/latest/download/con-reg-exp.browser.zip) directly.
 
-The release archive also contains TypeScript definitions that you can import, if you are using TypeScript.
+If you are using TypeScript, the release archive also contains TypeScript definitions.
+You can import them using triple-slash directive:
+
+```typescript
+/// <reference path="./con-reg-exp.d.ts" />
+```
 
 ## Using in the code
 

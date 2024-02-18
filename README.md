@@ -99,17 +99,17 @@ Convenient Regular Expressions:
 import cre from 'con-reg-exp';
 
 const number = cre`
-    optional [+-]                   // Sign
+    optional [+-];                    // Sign
     {
-        at-least-1 digit            // Integral part
-        optional ("." repeat digit) // Optional factional part
+        at-least-1 digit;             // Integral part
+        optional (".", repeat digit); // Optional factional part
     } or {
-        "." at-least-1 digit        // Variant with only fractional part
+        ".", at-least-1 digit;        // Variant with only fractional part
     }
-    optional {                      // Optional exponent part
-        [eE]
-        optional [+-]
-        at-least-1 digit
+    optional {                        // Optional exponent part
+        [eE];
+        optional [+-];
+        at-least-1 digit;
     }
 `;
 
@@ -117,17 +117,17 @@ const ws = cre`repeat whitespace`;
 
 function guessWhatDoesThisFunction(text) {
     return cre`
-        begin-of-text ${ws}   // Trim leading whitespaces
-        "[" ${ws}             // Begin of array
+        begin-of-text, ${ws}; // Trim leading whitespaces
+        "[", ${ws};           // Begin of array
         optional {            // Optional, because array can be empty
             repeat {          // Numbers with trailing comma
-                ${number} ${ws}
-                "," ${ws}
+                ${number}, ${ws};
+                ",", ${ws};
             }
-            ${number} ${ws}   // Last number has no comma
+            ${number}, ${ws}; // Last number has no comma
         }
-        "]" ${ws}             // End of array
-        end-of-text
+        "]", ${ws};           // End of array
+        end-of-text;
     `.test(text);
 }
 ```

@@ -77,7 +77,7 @@ let grammar = {
                         word-boundary;
                         "match" or "group" or "not" or "or" or {
                             optional ("lazy-" or "non-greedy-");
-                            "optional" or "repeat" or {
+                            {
                                 optional "repeat-";
                                 {
                                     optional "at-";
@@ -88,6 +88,10 @@ let grammar = {
                                     optional ("-to-", at-least-1 digit);
                                 }
                                 optional ("-time", optional "s");
+                            } or {
+                                "optional";
+                            } or {
+                                "repeat";
                             }
                         }
                         word-boundary;

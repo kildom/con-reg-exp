@@ -24,39 +24,39 @@ window.onload = function () {
                 hljs.COMMENT(/\/\//, /$/),
                 {
                     scope: 'literal',
-                    begin: cre.ignoreCase`"\\" [rnt0]`,
+                    begin: cre.ignoreCase`"\\", [rnt0]`,
                 },
                 {
                     scope: 'keyword',
                     begin: cre.ignoreCase`
-                        optional ("lazy-" or "non-greedy-")
+                        optional ("lazy-" or "non-greedy-");
                         {
-                            "optional"
-                        or
-                            optional "repeat-"
+                            optional "repeat-";
                             {
-                                optional "at-"
-                                ("least-" or "most-")
-                                at-least-1 digit
-                            or
-                                at-least-1 digit
-                                optional ("-to-" at-least-1 digit)
+                                optional "at-";
+                                "least-" or "most-";
+                                at-least-1 digit;
+                            } or {
+                                at-least-1 digit;
+                                optional ("-to-", at-least-1 digit);
                             }
-                            optional ("-time" optional "s")
-                        or
-                            "repeat"
+                            optional ("-time", optional "s");
+                        } or {
+                            "optional";
+                        } or {
+                            "repeat";
                         }`,
                 },
                 {
                     scope: 'name',
-                    begin: cre`([a-zA-Z_] repeat [a-zA-Z0-9_]) ":"`,
+                    begin: cre`[a-zA-Z_], repeat [a-zA-Z0-9_], ":"`,
                 },
                 {
                     scope: 'string',
                     begin: /"/,
                     end: /"/,
                     contains: [
-                        { begin: cre`"\\" any` },
+                        { begin: cre`"\\", any` },
                         { scope: 'subst', begin: /\${/, end: /}/ },
                     ],
                 },
@@ -65,7 +65,7 @@ window.onload = function () {
                     begin: /'/,
                     end: /'/,
                     contains: [
-                        { begin: cre`"\\" any` },
+                        { begin: cre`"\\", any` },
                         { scope: 'subst', begin: /\${/, end: /}/ },
                     ],
                 },
@@ -79,7 +79,7 @@ window.onload = function () {
                     begin: /\[/,
                     end: /\]/,
                     contains: [
-                        { begin: cre`"\\" any` },
+                        { begin: cre`"\\", any` },
                         { scope: 'subst', begin: /\${/, end: /}/ },
                     ],
                 },
@@ -91,9 +91,13 @@ window.onload = function () {
                 {
                     scope: 'type',
                     begin: cre.ignoreCase`
-                        ("end" or "start" or "begin") "-of-" ("text" or "line")
-                        or "word-bound" optional "ary"
-                        or "look" optional "-" ("ahead" or "behind")
+                        {
+                            ("end" or "start" or "begin"), "-of-", ("text" or "line");
+                        } or {
+                            "word-bound", optional "ary";
+                        } or {
+                            "look", optional "-", ("ahead" or "behind");
+                        }
                         `,
                 }
             ]
