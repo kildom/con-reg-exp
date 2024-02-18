@@ -1,0 +1,53 @@
+name: Build
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Release Tag
+        required: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4.1.1
+    - name: Install, build, check and test
+      run: |
+        npm install
+        npm run build
+        cd docs/samples
+        npm install
+        cd ../..
+        npm run build-web
+        npm run test-imports
+        npm pack
+    - name: Prepare release packages
+      if: "${{ github.event.inputs.tag_name != '' || github.event.inputs.upload == 'yes' }}"
+      run: |
+        sudo apt-get install zip
+        cd dist/browser
+        zip -r ../../con-reg-exp-browser.zip *
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: "${{ github.event.inputs.tag_name != '' }}"
+      with:
+        files: |
+          ./*.zip
+          ./*.gz
+          ./*.tgz
+        draft: false
+        tag_name: ${{ github.event.inputs.tag_name }}
+        fail_on_unmatched_files: true
+        target_commitish: ${{ env.commit_hash }}
+        generate_release_notes: true
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v3.1.3
+      with:
+        name: result
+        path: |
+          ./*.zip
+          ./*.gz
+          ./*.tgz
+          web
