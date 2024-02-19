@@ -58,6 +58,12 @@ const myRegExp = cre`... regular expression goes here ...`;
 
 The `cre` tag function returns a standard [`RegExp`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp) object.
 
+> [!CAUTION]
+> The input string for the `cre` tag function must be trusted.
+> Don't pass unescaped user input to it.
+>
+> This also applies to [interpolation](#interpolation) except [string interpolation](#string-interpolation).
+
 # Flags
 
 After the `cre` tag, you can specify one or more flags.
@@ -179,7 +185,7 @@ The example above can be rewritten as follows:
 let isNotHexString = cre`not [0-9a-fA-F]`.test(input);
 ```
 
-### Character class alias
+### Character class keyword
 
 Some character classes can be expressed with the keyword, for example `any` matches
 any character.
@@ -530,12 +536,10 @@ function validateJSONArrayOfNumbers(text) {
 }
 ```
 
-> [!NOTE]
-> If it is possible, try to interpolate *CRE* expression instead of strings.
-> Use string only when interpolated expression is not a full *CRE* expression.
-> For example:
+If it is possible, try to interpolate *CRE* expression instead of strings.
+Use string only when interpolated expression is not a full *CRE* expression.
 
-
+For example:
 ```javascriptwithcre
 function validateWord(text, allowEmpty) {
     let quantifier = allowEmpty ? 'repeat' : 'at-least-1';
