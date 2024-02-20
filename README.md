@@ -3,7 +3,7 @@
 〚 [Web Page](https://kildom.github.io/con-reg-exp/) 〛&nbsp;
 〚 [Tutorial](https://kildom.github.io/con-reg-exp/tutorial.html) 〛&nbsp;
 〚 [Docs](https://kildom.github.io/con-reg-exp/docs.html) 〛&nbsp;
-〚 [Web Demo](https://kildom.github.io/con-reg-exp/demo.html) 〛&nbsp;
+〚 [Web Demo](https://kildom.github.io/cre-web-demo/) 〛&nbsp;
 
 This is a JavaScript module that provides different syntax for regular expressions.
 The syntax is more convenient making it much easier to understand, review, maintain, and more.

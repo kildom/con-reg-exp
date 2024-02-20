@@ -1,7 +1,7 @@
 
 * [<span><span class="material-symbols-outlined">school</span></span>Get started](#get-started)
 * [<span><span class="material-symbols-outlined">menu_book</span></span>Docs](docs.html)
-* [<span><span class="material-symbols-outlined">lightbulb</span></span>Demo](demo.html)
+* [<span><span class="material-symbols-outlined">lightbulb</span></span>Demo](https://kildom.github.io/cre-web-demo/)
 * [<img src="npm.svg">npm](https://www.npmjs.com/package/con-reg-exp)
 * [<img src="github-mark.svg">GitHub](https://github.com/kildom/con-reg-exp/)
 
@@ -115,7 +115,7 @@ console.log(...words);
 
 * [Learn details from the documentation](docs.html)
 
-* [Experiment with web demo](demo.html)
+* [Experiment with web demo](https://kildom.github.io/cre-web-demo/)
 
 <!--
 Copyright © 2024

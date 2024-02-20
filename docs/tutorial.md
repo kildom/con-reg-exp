@@ -590,7 +590,6 @@ const result = input.matchAll(quotesExtract);
 
 console.log([...result].map(m => m.groups.quotation));
 console.log(quotesExtract);
-
 ```
 
 And see the result:
