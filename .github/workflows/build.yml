@@ -13,12 +13,26 @@ on:
         - 'no'
         - 'yes'
 jobs:
-  build:
+  build-node18:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/setup-node@v4
       with:
         node-version: '18.x'
+    - name: Checkout
+      uses: actions/checkout@v4.1.1
+    - name: Install, build, check and test
+      run: |
+        npm install
+        npm run build
+        npm run test
+  build:
+    runs-on: ubuntu-latest
+    needs: build-node18
+    steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
         registry-url: 'https://registry.npmjs.org'
     - name: Checkout
       uses: actions/checkout@v4.1.1
@@ -30,7 +44,7 @@ jobs:
         npm install
         cd ../..
         npm run build-web
-        npm run test-imports
+        npm run test
         npm pack
         echo RELEASE_TAG=v`node scripts/show-version.mjs` >> "$GITHUB_ENV"
         sudo apt-get install zip

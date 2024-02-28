@@ -8,4 +8,5 @@
     "editor.unicodeHighlight.includeStrings": true,
     "editor.unicodeHighlight.ambiguousCharacters": true,
     "livePreview.autoRefreshPreview": "On Changes to Saved Files",
+    "vitest.enable": true,
 }

@@ -1263,6 +1263,7 @@ const proxyHandler = {
             case 'unicode': update = { unicodeSets: true }; break;
             case 'sticky': update = { sticky: true }; break;
             case 'cache': update = { cache: true }; break;
+            default: throw new Error(`Unknown flag ${prop}.`);
         };
         let newObj = { ...obj, ...update, _id: id };
         proxyCache[id] = (new Proxy(() => newObj, proxyHandler) as any);

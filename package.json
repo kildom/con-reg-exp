@@ -21,19 +21,22 @@
     "showdown": "^2.1.0",
     "showdown-highlight": "^3.1.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.7.1",
     "typescript": "^5.3.3",
     "underscore": "^1.13.6",
+    "vitest": "^1.3.1",
     "webpack": "^5.90.2",
     "webpack-cli": "^5.1.4"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "prebuild": "npx esbuild --target=chrome62,edge79,firefox53,safari11 --bundle --global-name=GtEa1M6 --sourcemap=linked --minify src/con-reg-exp.ts --outfile=dist/browser/con-reg-exp.min.js && npx esbuild --target=chrome62,edge79,firefox53,safari11 --bundle --global-name=GtEa1M6 --sourcemap=linked src/con-reg-exp.ts --outfile=dist/browser/con-reg-exp.js",
     "build": "npx tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json",
     "postbuild": "npx ts-node --swc scripts/postbuild.ts",
-    "test-imports": "npx ts-node --swc test/test-imports/run-test.ts",
+    "prebuild-web": "npx ts-node --swc scripts/build-docs.ts",
     "build-web": "npx ts-node --swc scripts/build-web-index.ts",
-    "prebuild-web": "npx ts-node --swc scripts/build-docs.ts"
+    "test": "npm run test-unit run && npm run test-imports",
+    "test-unit": "npx vitest",
+    "test-imports": "npx ts-node --swc test/test-imports/run-test.ts"
   },
   "repository": {
     "type": "git",
