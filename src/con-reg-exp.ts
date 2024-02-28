@@ -1166,6 +1166,9 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
     }
 
     let expr = parseList(ctx);
+    if (ctx.peek()) {
+        throw ctx.error(ctx.peek(), 'Unmatched closing bracket.');
+    }
     let pattern = expr.generate();
     let regexpFlags = 's';
     if (ctx.info.flags.indices) regexpFlags += 'd';

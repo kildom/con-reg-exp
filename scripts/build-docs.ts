@@ -196,7 +196,7 @@ for (let file of markdownFiles) {
     let all = html.matchAll(cre.global.cache`
         "<h", level: digit;
         lazy-repeat any;
-        "id=" ["], id: lazy-repeat any, ["];
+        "id=", ["], id: lazy-repeat any, ["];
         lazy-repeat any;
         ">";
         title: lazy-repeat any;
