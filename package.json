@@ -1,6 +1,6 @@
 {
   "name": "con-reg-exp",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Convenient Regular Expressions - a different approach to the regular expressions syntax.",
   "main": "./dist/cjs/con-reg-exp.cjs",
   "module": "./dist/esm/con-reg-exp.mjs",
