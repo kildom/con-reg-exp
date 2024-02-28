@@ -20,16 +20,18 @@ import cre from '../src/con-reg-exp';
 
 console.log('\n');
 
+const whitespaceWithoutNewLine = cre.legacy`[\r\t\v\f \xA0\uFEFF]`;
 
 console.log(`const tokenRegExpBase = ${cre.sticky.legacy`
-begin-of-text;
-repeat whitespace;
+repeat ${whitespaceWithoutNewLine};
 {
     begin: [{(];
 } or {
     end: [)}];
 } or {
     separator: [,;];
+} or {
+    newLine: \n;
 } or {
     label: ([a-zA-Z_], repeat [a-zA-Z0-9_]);
     ":";
@@ -60,18 +62,19 @@ repeat whitespace;
     comment2: ("//", lazy-repeat any);
     end-of-line;
 }
-repeat whitespace;
+repeat ${whitespaceWithoutNewLine};
 `};\n`);
 
 console.log(`const tokenRegExpVMode = ${cre.sticky.legacy`
-begin-of-text;
-repeat whitespace;
+repeat ${whitespaceWithoutNewLine};
 {
     begin: [{(];
 } or {
     end: [)}];
 } or {
     separator: [,;];
+} or {
+    newLine: \n;
 } or {
     label: ([a-zA-Z_], repeat [a-zA-Z0-9_]);
     ":";
@@ -100,7 +103,7 @@ repeat whitespace;
     comment2: ("//", lazy-repeat any);
     end-of-line;
 }
-repeat whitespace;
+repeat ${whitespaceWithoutNewLine};
 `};\n`);
 
 

@@ -94,9 +94,9 @@ class TokenizerError extends Error {
 // #region Generated Regular Expressions
 
 
-const tokenRegExpBase = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)(?=[\r\n\u2028\u2029]|$))\s*/sy;
+const tokenRegExpBase = /[\r\t\v\f \xA0\uFEFF]*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<newLine>\n)|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)[\r\t\v\f \xA0\uFEFF]*/msy;
 
-const tokenRegExpVMode = /\s*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|(?<characterClassVMode>\[)(?<complement>\^)?|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)(?=[\r\n\u2028\u2029]|$))\s*/sy;
+const tokenRegExpVMode = /[\r\t\v\f \xA0\uFEFF]*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<newLine>\n)|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|(?<characterClassVMode>\[)(?<complement>\^)?|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)[\r\t\v\f \xA0\uFEFF]*/msy;
 
 const quantifierRegExp = /^(?<lazy>lazy-|non-greedy-)?(?:(?<optional>optional)|(?<repeat>repeat)|(?:repeat-)?(?:(?:at-)?(?:(?<least>least-)|(?<most>most-))(?<count>\d+)|(?<min>\d+)(?:-to-(?<max>\d+))?)(?:-times?)?)$/su;
 
@@ -172,6 +172,7 @@ enum TokenType {
 interface TextToken {
     type: TokenType.Literal | TokenType.Identifier | TokenType.Label | TokenType.Keyword;
     position: number;
+    beginOfLine: boolean;
     text: string;
 }
 
@@ -181,6 +182,7 @@ interface TextToken {
 interface CharacterClassToken {
     type: TokenType.CharacterClass;
     position: number;
+    beginOfLine: boolean;
     text: string;
     complement: boolean;
 }
@@ -191,6 +193,7 @@ interface CharacterClassToken {
 interface InterpolationBeginToken {
     type: TokenType.InterpolationBegin;
     position: number;
+    beginOfLine: boolean;
     source: ExpressionSource;
 }
 
@@ -200,6 +203,7 @@ interface InterpolationBeginToken {
 interface EmptyToken {
     type: TokenType.Begin | TokenType.End | TokenType.Separator | TokenType.InterpolationEnd;
     position: number;
+    beginOfLine: boolean;
 }
 
 /**
@@ -214,6 +218,7 @@ interface TokenRegExpGroups {
     begin?: string;
     end?: string;
     separator?: string;
+    newLine?: string;
     label?: string;
     keyword?: string;
     literal?: string;
@@ -273,24 +278,30 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
     let groups: TokenRegExpGroups | undefined;
     let position = 0;
     let prefixReplace: RegExp = new RegExp(interpolationPrefix + '([0-9]+)\\}', 'g');
+    let beginOfLine = true;
 
     while ((groups = tokenRegex.exec(text)?.groups)) {
+        let nextBeginOfLine = false;
         if (groups.begin !== undefined) {
             // Parentheses or braces begin.
-            result.push({ position, type: TokenType.Begin });
+            result.push({ position, beginOfLine, type: TokenType.Begin });
         } else if (groups.end !== undefined) {
             // Parentheses or braces end.
-            result.push({ position, type: TokenType.End });
+            result.push({ position, beginOfLine, type: TokenType.End });
         } else if (groups.separator !== undefined) {
             // Separator.
-            result.push({ position, type: TokenType.Separator });
+            result.push({ position, beginOfLine, type: TokenType.Separator });
+        } else if (groups.newLine !== undefined) {
+            // New line.
+            nextBeginOfLine = true;
         } else if (groups.label !== undefined) {
             // Label (capturing group begin).
-            result.push({ position, type: TokenType.Label, text: groups.label });
+            result.push({ position, beginOfLine, type: TokenType.Label, text: groups.label });
         } else if (groups.keyword !== undefined) {
             // Keyword.
             result.push({
                 position,
+                beginOfLine,
                 type: TokenType.Keyword,
                 text: groups.keyword.toLowerCase().replace(/\u2011/g, '-'),
             });
@@ -312,13 +323,18 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
             }
             // Evaluate string literal as JavaScript expression.
             try {
-                result.push({ position, type: TokenType.Literal, text: (new Function(`return ${content};`))() });
+                result.push({
+                    position,
+                    beginOfLine,
+                    type: TokenType.Literal,
+                    text: (new Function(`return ${content};`))(),
+                });
             } catch (ex) {
                 throw new TokenizerError(position, 'Error parsing string literal.');
             }
         } else if (groups.identifier !== undefined) {
             // Identifier.
-            result.push({ position, type: TokenType.Identifier, text: groups.identifier });
+            result.push({ position, beginOfLine, type: TokenType.Identifier, text: groups.identifier });
         } else if (groups.characterClass !== undefined || groups.characterClassVMode !== undefined) {
             // Character class.
             let content: string;
@@ -343,7 +359,13 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
                     return escapeCharacterClass(value, flags.unicodeSets);
                 });
             }
-            result.push({ position, type: TokenType.CharacterClass, text: content, complement: !!groups.complement });
+            result.push({
+                position,
+                beginOfLine,
+                type: TokenType.CharacterClass,
+                text: content,
+                complement: !!groups.complement,
+            });
         } else if (groups.prefix === interpolationPrefix) {
             // Placeholder - another expression interpolated directly here.
             let value = values[parseInt(groups.index as string)];
@@ -352,11 +374,20 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
                 let innerPrefix = generatePrefixForText([value]);
                 result.push({
                     position,
+                    beginOfLine: false,
                     type: TokenType.InterpolationBegin,
                     source: { sourceCode: value, interpolationPrefix: innerPrefix, flags },
                 });
-                result = result.concat(tokenize(value, innerPrefix, [], flags));
-                result.push({ position, type: TokenType.InterpolationEnd });
+                let innerTokens = tokenize(value, innerPrefix, [], flags);
+                let firstRealToken = innerTokens.find(token =>
+                    (token.type !== TokenType.InterpolationBegin && token.type !== TokenType.InterpolationEnd));
+                if (firstRealToken) {
+                    firstRealToken.beginOfLine = beginOfLine;
+                } else {
+                    nextBeginOfLine = beginOfLine;
+                }
+                result = result.concat(innerTokens);
+                result.push({ position, beginOfLine: false, type: TokenType.InterpolationEnd });
             } else {
                 // Convenient Regular Expression, first check if significant flags are the same.
                 if (flags.ignoreCase !== value.flags.ignoreCase) {
@@ -373,11 +404,11 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
                         `interpolated expression: "${value.flags.unicodeSets ? 'set' : 'unset'}".`);
                 }
                 // Place tokens from the source expression and enclose in parentheses.
-                result.push({ position, type: TokenType.Begin });
-                result.push({ position, type: TokenType.InterpolationBegin, source: value });
+                result.push({ position, beginOfLine, type: TokenType.Begin });
+                result.push({ position, beginOfLine: false, type: TokenType.InterpolationBegin, source: value });
                 result = result.concat(value.tokens);
-                result.push({ position, type: TokenType.InterpolationEnd });
-                result.push({ position, type: TokenType.End });
+                result.push({ position, beginOfLine: false, type: TokenType.InterpolationEnd });
+                result.push({ position, beginOfLine: false, type: TokenType.End });
             }
         } else if (groups.comment1 !== undefined || groups.comment2 !== undefined) {
             // Comments - skip them.
@@ -386,6 +417,7 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
             break;
         }
         position = tokenRegex.lastIndex;
+        beginOfLine = nextBeginOfLine;
     }
     if (position < text.length) {
         throw new TokenizerError(position, 'Syntax error.');
@@ -428,6 +460,7 @@ class Context {
     public error(token: Token | undefined, message: string): Error {
         let stack: InterpolationBeginToken[] = [{
             type: TokenType.InterpolationBegin,
+            beginOfLine: false,
             position: 0,
             source: this.info,
         }];
@@ -995,8 +1028,8 @@ function parseList(ctx: Context): Node {
         } else {
             let item = parseOr(ctx);
             next = ctx.peek();
-            if (next && next.type !== TokenType.Separator && ctx.peekPrev()?.type !== TokenType.End) {
-                ctx.error(next, 'Expecting separator')
+            if (next && next.type !== TokenType.Separator && next.type !== TokenType.End && !next.beginOfLine) {
+                throw ctx.error(next, 'Expecting separator')
             }
             items.push(item);
         }
@@ -1127,7 +1160,7 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
     } catch (err) {
         if (err instanceof TokenizerError) {
             ctx = new Context(expressionInfo);
-            throw ctx.error({ position: err.position, type: TokenType.Begin }, err.message);
+            throw ctx.error({ position: err.position, beginOfLine: false, type: TokenType.Begin }, err.message);
         }
         throw err;
     }
