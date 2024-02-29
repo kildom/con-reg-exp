@@ -122,15 +122,15 @@ window.onload = function () {
             },
             {
                 scope: 'regexp',
-                begin: cre`"/" lookahead not "/"`,
+                begin: cre`"/", lookahead not "/"`,
                 end: /\/[gimuvsy]*/,
                 contains: [
-                    { begin: cre`"\\" any` },
+                    { begin: cre`"\\", any` },
                     {
                         begin: /\[/,
                         end: /\]/,
                         contains: [
-                            { begin: cre`"\\" any` },
+                            { begin: cre`"\\", any` },
                         ],
                     },
                 ],
