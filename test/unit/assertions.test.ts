@@ -5,6 +5,7 @@ import cre from '../../src/con-reg-exp';
 
 describe('Assertions', () => {
     test('Input/line boundary assertion', () => {
+        expect(cre`any`).toStrictEqual(/./su);
         expect(cre`begin-of-text, end-of-text`).toStrictEqual(/^$/su);
         expect(cre`start-of-text`).toStrictEqual(/^/su);
         expect(cre`begin-of-line, end-of-line`).toStrictEqual(/^$/msu);

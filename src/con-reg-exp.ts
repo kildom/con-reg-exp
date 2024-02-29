@@ -94,9 +94,9 @@ class TokenizerError extends Error {
 // #region Generated Regular Expressions
 
 
-const tokenRegExpBase = /[\r\t\v\f \xA0\uFEFF]*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<newLine>\n)|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)[\r\t\v\f \xA0\uFEFF]*/msy;
+const tokenRegExpBase = /[\r\t\v\f \xA0\uFEFF]*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<newLine>\n)|(?<label>[a-zA-Z_][a-zA-Z0-9_]*|[1-9][0-9]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|\[(?<complement>\^)?(?<characterClass>(?:\\.|.)*?)\]|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)[\r\t\v\f \xA0\uFEFF]*/msy;
 
-const tokenRegExpVMode = /[\r\t\v\f \xA0\uFEFF]*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<newLine>\n)|(?<label>[a-zA-Z_][a-zA-Z0-9_]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|(?<characterClassVMode>\[)(?<complement>\^)?|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)[\r\t\v\f \xA0\uFEFF]*/msy;
+const tokenRegExpVMode = /[\r\t\v\f \xA0\uFEFF]*(?:(?<begin>[{(])|(?<end>[)}])|(?<separator>[,;])|(?<newLine>\n)|(?<label>[a-zA-Z_][a-zA-Z0-9_]*|[1-9][0-9]*):|(?<keyword>[a-zA-Z0-9\u2011\\-]+)|(?<literal>(?<_literalQuote>["'])(?:\\.|.)*?\k<_literalQuote>)|<(?<identifier>.*?)>|(?<characterClassVMode>\[)(?<complement>\^)?|(?<prefix>`[A-Z]{3,})(?<index>[0-9]+)\}|(?<comment1>\/\*.*?\*\/)|(?<comment2>\/\/.*?)$)[\r\t\v\f \xA0\uFEFF]*/msy;
 
 const quantifierRegExp = /^(?<lazy>lazy-|non-greedy-)?(?:(?<optional>optional)|(?<repeat>repeat)|(?:repeat-)?(?:(?:at-)?(?:(?<least>least-)|(?<most>most-))(?<count>\d+)|(?<min>\d+)(?:-to-(?<max>\d+))?)(?:-times?)?)$/su;
 
@@ -431,10 +431,20 @@ function tokenize(text: string, interpolationPrefix: string, values: (string | E
 // #region Parser Context
 
 
+enum ContextBoundaryTypes {
+    NONE = 0,
+    LINE = 1,
+    TEXT = 2,
+    BOTH = 3,
+}
+
+
 class Context {
 
     private index: number;
     private interpolationStack: InterpolationBeginToken[] = [];
+    private lastGroupIndex = 0;
+    private boundaryTypes = ContextBoundaryTypes.NONE;
 
     public constructor(
         public info: ExpressionTokenized,
@@ -541,6 +551,16 @@ class Context {
                 break;
             }
         } while (true);
+    }
+
+    public reserveGroupIndex() {
+        this.lastGroupIndex++;
+        return this.lastGroupIndex;
+    }
+
+    public useBoundary(type: ContextBoundaryTypes) {
+        this.boundaryTypes |= type;
+        this.info.flags.multiline = (this.boundaryTypes === ContextBoundaryTypes.LINE);
     }
 }
 
@@ -835,6 +855,7 @@ class LineBoundary extends InvertibleNode {
         ) {
             obj = new LineBoundary(false);
             obj.start = (token.text !== 'end-of-line');
+            ctx.useBoundary(ContextBoundaryTypes.LINE);
             obj.flags = ctx.info.flags;
         }
         return obj;
@@ -865,7 +886,7 @@ class TextBoundary extends InvertibleNode {
         ) {
             obj = new TextBoundary(false);
             obj.start = (token.text !== 'end-of-text');
-            ctx.info.flags.multiline = false;
+            ctx.useBoundary(ContextBoundaryTypes.TEXT);
         }
         return obj;
     }
@@ -880,28 +901,33 @@ class TextBoundary extends InvertibleNode {
 
 class Group extends Node {
 
-    private id!: string | undefined;
+    private name?: string;
+    private index!: number;
     private child!: Node;
 
     public static create(token: Token, ctx: Context) {
         let obj: Group | undefined = undefined;
-        if (token.type === TokenType.Keyword && token.text === 'group') {
+        if (token.type === TokenType.Label) {
             obj = new Group();
-            obj.id = undefined;
-            obj.child = parseLeaf(ctx);
-        } else if (token.type === TokenType.Label) {
-            obj = new Group();
-            obj.id = token.text;
+            obj.index = ctx.reserveGroupIndex();
+            if (token.text.match(/^[0-9]+$/)) {
+                let providedIndex = parseInt(token.text);
+                if (providedIndex != obj.index) {
+                    throw ctx.error(token, `Mismatching positional capturing group. Provided ${providedIndex}, expected ${obj.index}.`);
+                }
+            } else {
+                obj.name = token.text;
+            }
             obj.child = parseLeaf(ctx);
         }
         return obj;
     }
 
     public generateAtom(): string {
-        if (!this.id) {
+        if (!this.name) {
             return `(${this.child.generate()})`;
         } else {
-            return `(?<${this.id}>${this.child.generate()})`;
+            return `(?<${this.name}>${this.child.generate()})`;
         }
     }
 }
@@ -1143,7 +1169,7 @@ function parse(text: string, interpolationPrefix: string, values: (string | Expr
         sourceCode: text,
         tokens: [],
         flags: {
-            multiline: true,
+            multiline: false,
             indices: false,
             global: false,
             ignoreCase: false,

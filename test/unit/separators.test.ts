@@ -17,11 +17,11 @@ describe('Separators', () => {
 
         expect(cre`
             "abc"
-            group "def"
-            group "ghi";
-            (group "jkl")
-            group "mno"
-        `).toStrictEqual(/abc(def)(ghi)(jkl)(mno)/msu)
+            1: "def"
+            2: "ghi";
+            (3: "jkl")
+            4: "mno"
+        `).toStrictEqual(/abc(def)(ghi)(jkl)(mno)/su)
 
     });
 
@@ -40,10 +40,10 @@ describe('Separators', () => {
         expect(() => cre`${inner2} "ghi"`).toThrow();
         expect(cre`
             ${inner}
-            group ${inner2}
-            group ${inner};
-            (group ${inner})
-            group ${inner2}
-        `).toStrictEqual(/def(def)(def)(def)(def)/msu)
+            1: ${inner2}
+            2: ${inner};
+            (3: ${inner})
+            4: ${inner2}
+        `).toStrictEqual(/def(def)(def)(def)(def)/su)
     });
 });

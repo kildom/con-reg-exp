@@ -33,7 +33,13 @@ repeat ${whitespaceWithoutNewLine};
 } or {
     newLine: \n;
 } or {
-    label: ([a-zA-Z_], repeat [a-zA-Z0-9_]);
+    label: {
+        {
+            [a-zA-Z_], repeat [a-zA-Z0-9_];
+        } or {
+            [1-9], repeat [0-9];
+        }
+    }
     ":";
 } or {
     keyword: at-least-1 [a-zA-Z0-9\u2011\\-];
@@ -76,7 +82,13 @@ repeat ${whitespaceWithoutNewLine};
 } or {
     newLine: \n;
 } or {
-    label: ([a-zA-Z_], repeat [a-zA-Z0-9_]);
+    label: {
+        {
+            [a-zA-Z_], repeat [a-zA-Z0-9_];
+        } or {
+            [1-9], repeat [0-9];
+        }
+    }
     ":";
 } or {
     keyword: at-least-1 [a-zA-Z0-9\u2011\\-];
