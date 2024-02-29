@@ -5,6 +5,9 @@ The tutorial will show you how to setup and use basic functionality of the Conve
 We will be using `node.js` (with `npm`), JavaScript and ES modules.
 See the ["Installing" section in the documentation](docs.md#installing) for other options.
 
+Alternatively, if you don't want to install anything yet, you can use our on-line demo page to run the code.
+Use **`try it`** buttons to open the sample.
+
 Before you begin you should know basics of the standard JavaScript's regular expressions (RegExp object).
 
 # Install
@@ -35,9 +38,18 @@ Use `import` statement to import the `con-reg-exp` module:
 ```javascript
 import cre from "con-reg-exp";
 ```
+[try it](https://kildom.github.io/cre-web-demo/#184THnF5uVjEDF3pMIkekkjUXAA==)
 
-The only identifier that you need import is `cre`.
+The only identifier that you need to import is `cre`.
 The module does not export anything else, so the above line will never change.
+
+> [!NOTE]
+> Some packages manager may have issues with default importing `cre`.
+> In such cases you can try importing by name:
+> ```javascript
+> import { cre } from "con-reg-exp";
+> ```
+> [try it](https://kildom.github.io/cre-web-demo/#184THnF5uVjEDFzQmq8FxWQuJTeTIVLLmAgA=)
 
 # Your first Convenient Regular Expression
 
@@ -70,6 +82,7 @@ const result = input.replace(myFirstExp, "Convenient Regular Expressions");
 
 console.log(result);
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1KykFGp2ZmKNrqJebVczAhR6TyBGpZM3FBclOuZVumUXFJcBCARqrSuH5RTkpSglwFeCiAiip5JGak5OvAJZWVFQEGgGRL0otLs0BKQArhBcBCIN1FJSA5UdZal5mal4JqAQChmyRAlACqLMYGMLFSppQy2C5HWIkUBQA)
 
 Now, run it:
 
@@ -90,6 +103,7 @@ Add the following line at the end of your script:
 ```javascript
 console.log(myFirstExp);
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1KykFGp2ZmKNrqJebVczAhR6TyBGpZM3FBclOuZVumUXFJcBCARqrSuH5RTkpSglwFeCiAiip5JGak5OvAJZWVFQEGgGRL0otLs0BKQArhBcBCIN1FJSA5UdZal5mal4JqAQChmyRAlACqLMYGMLFSppQy2C5HWIkUBRZEGEgUAIA)
 
 Run the script again and the expected output is now:
 
@@ -121,6 +135,7 @@ letters in our replacement:
 ```javascriptwithcre
 const myFirstExp = cre.ignoreCase`"world"`;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1KykFGp2ZmKNrqJebVczAhR6TyBGpZM3FBclOuZVumUXFJcBCARKryHGoBPRHTopSAlwxuNQAqlPySM3JyVcIB0krKioCTYPIF6UWl+aAFIAVwksDhB06CkrAoqQsNS8zNa8EVBgBA7lIASgB1FkMDOxiJU2oZbCMDzESKIosiDAQKAEA)
 
 Run the script and the expected output is now:
 
@@ -139,6 +154,7 @@ Add the following line to the end of your script:
 ```javascriptwithcre
 console.log(result.replace(cre.global`[^a-zA-Z]`, ''));
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1KykFGp2ZmKNrqJebVczAhR6TyBGpZM3FBclOuZVumUXFJcBCARKryHGoBPRHTopSAlwxuNQAqlPySM3JyVcIB0krKioCTYPIF6UWl+aAFIAVwksDhB06CkrAoqQsNS8zNa8EVBgBA7lIASgB1FkMDOxiJU2oZbCMDzESKIosiDAQTQKiGm4xyD/QtBkdl6hb5agbFZugo6CurgnUBwA=)
 
 Run it and you should see:
 ```text
@@ -161,6 +177,7 @@ Add it to the end of the script.
 ```javascriptwithcre
 console.log(result.replace(cre.global`whitespace`, '_'));
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1KykFGp2ZmKNrqJebVczAhR6TyBGpZM3FBclOuZVumUXFJcBCARKryHGoBPRHTopSAlwxuNQAqlPySM3JyVcIB0krKioCTYPIF6UWl+aAFIAVwksDhB06CkrAoqQsNS8zNa8EVBgBA7lIASgB1FkMDOxiJU2oZbCMDzESKIosiDAQTQKiGm4xyD/QtBkdl6hb5agbFZugo6Curkm0PkS0gjTGg3UCAA==)
 
 The last line of output is now:
 
@@ -176,6 +193,7 @@ Add the following to the script:
 ```javascriptwithcre
 console.log(result.replace(cre.global`not whitespace`, '?'));
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1KykFGp2ZmKNrqJebVczAhR6TyBGpZM3FBclOuZVumUXFJcBCARKryHGoBPRHTopSAlwxuNQAqlPySM3JyVcIB0krKioCTYPIF6UWl+aAFIAVwksDhB06CkrAoqQsNS8zNa8EVBgBA7lIASgB1FkMDOxiJU2oZbCMDzESKIosiDAQTQKiGm4xyD/QtBkdl6hb5agbFZugo6Curkm0PkS0gjTGk6ATlNhQdduDdQMA)
 
 Now, output ends with:
 
@@ -210,6 +228,7 @@ const result = input.replace(mySecondExp, "white");
 console.log(result);
 console.log(mySecondExp);
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1KykFGp2ZmKNrpJebVczAhR6TyBGpZM3FBclOuZXBqUBWCrBUgEQrLDKV0ouUdBSiE1NjdRSUKpUS4DrARQdQrVJIRqqCa156TmZxRm5innqxQkZiZpFCZjHQhamVegogacfc1KLMZDTJxEo9oP0Qw4pSi0tzQKaBTYWXH0iuAtoODlolTagLYEUCRCtQFFkQSSNQBgA=)
 
 Now, run it:
 
@@ -242,12 +261,24 @@ const mySecondExp = cre.global`
     "y";
 `;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVQxDgIhELTmFWQbY6IUtlYWvkA7YyLRzbEGrmC9gt+7sN6FXLfZYSYTBuY7iTT5eDi69OGNWSfZBwknY/Q7pXJFmd7SChrrHKap7xWGLEfrdPf40AmKrJ6LQGsSocItoL2MQyQOyY9btsFTtsRiGIuzFT4nzPRagb44EVSxjDzFqtZUlzrpTO4ttJuG3d/B3BBKlW2/7IiC/AA=)
 
 Run it again and you should see exactly the same output.
 
 There is one additional separator at the end of the expression.
 It is redundant, but it should be there for consistency.
 The redundant separators are ignored.
+
+As in JavaScript, semicolons at the end of line are optional, so the same expression without semicolons will be:
+
+```javascriptwithcre
+const mySecondExp = cre.global`
+    "gr"
+    [ae]
+    "y"
+`;
+```
+[try it](https://kildom.github.io/cre-web-demo/#1XVQxCgIxELTOK8I2ImgKWysLX6CdCAZdLivJFVmvyO/dZL0jXLfsMMOQyc53Emny8XB06cMbs06yDxJOxug5pXJFmd7SChrrHKap/xWGDG24e3zopoB5LuxWI8KDW0B7GYdIHJIft2yDp2yJxS0WZyt8TpjptQJ9ceJFxTLyFKtaU126pHO4t9CeGXZ/B3M9KFW2/bIjCvID)
 
 This example looks better in single-line form, but when expression grows
 it is much better to use multiple lines.
@@ -261,6 +292,7 @@ We can rewrite previous expression to use `or` instead of character class.
 ```javascriptwithcre
 const mySecondExp = cre.global`"gray" or "grey"`;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1KykFGp2ZmKNrpJebVczAhR6TyBGpZM3FBclOuZXBqUBWCrBUgEQrLDKV0osSK5VAiRnISq1USoBrAZcdQMVKIRmpCq556TmZxRm5iXnqxQoZiZlFCpnFQCemVuopgKQdc1OLMpPRJBMr9YAOgBhWlFpcmgMyDWwqvABBcpaOghI4bJU0oS6AlQkQrUBRZEEkjUAZAA==)
 
 Run it and you will get:
 
@@ -269,12 +301,13 @@ The Englishman's hair is white. The American's hair is white.
 /gray|grey/gmsu
 ```
 
-We apply or operator on entire words in the expression above.
+We apply `or` operator on entire words in the expression above.
 Now, try to apply `or` only to letters are different.
 
 ```javascriptwithcre
 const mySecondExp = cre.global`"gr", "a" or "e", "y"`;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVQxDsIwDGTOKyIvCAkysDIx8AJ4ABZYjVHSIaZDfl8naauom+XTXU655P6TSjOGy9XFnxzMPsk+SLgZ075TzE/S6aut0GJdw4QhwdkCQnnPQGXO8N54tUCUAS9P9jEOgcVHHI9iPXKyLOqTsrMFvkdK/NmBmJ26aGKJZApFrapuLdJ509PrBcNpcbAWQ6Pqtl92REVm)
 
 The output is now:
 
@@ -304,6 +337,7 @@ const result = input.replace(mySecondExp, "white");
 console.log(result);
 console.log(mySecondExp);
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVTBDsIgDPXMV5BedInu4NWTB79gfsCINoCBmdBhwt9bYFvIbtC+9pU8+ubIra1yl2vvP3QQeyVbIeEmRF0nnwbk05tdocq6inkCHeAsQUH+0ID5nKArF7LuhwHGrUuxE64fnwblY9LOkvFqOpI0ygZpiafGJPIKZMTdY7CvXV6lvgCGr+fVnA0GqWNiAMnKV7A9k1bOgBRdJi3km/U0D+KJiyrQLYOublJLOdoGm0LO/AE=)
 
 Run the script and you will see:
 
@@ -337,6 +371,7 @@ const mySecondExp = cre.global`
     }
 `;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVTBDsIgDPXMV5BejInu4NWTB79gfsCINgMDM6GbCfHnLcVtZBwIaV/7aF7bceLUzvjTuQkv2qmtkrWQcFGqjFNILfLryVuhyDqLqXK/fuXOB/oIRw0GcnsD5nfiLGvHr0hy/oNxdqpu4ZKlwyzd3aK+Db13ZIMZ9qStcVE74towSVhGXANG99j4TWoE0L4DD/BoMep+SgwgXXgF2zBp4YxIk8+kQr4sqKpsrkS0g8P/o/POKaFsrY1VIHt+)
 
 The braces around `"silver"` are not required, but using them will make the expression more readable.
 
@@ -364,6 +399,7 @@ const mySecondExp = cre.global`
     }
 `;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVTNTsMwDOacp4h8QSAoEtedOPAE4wEWWNQENZsUt0gRL7/PdrtF6yVu/P85n+cFoXOYXt+H8ssP7n6S/SBp55zRqbR9hHTEVrCxbsN0yslnPfASv1L0cKyRGaB4JTZgJc7TX6wEXI6exhoaCae+z3Py4GDhYQ3wpue//eGDLb14CiR0oShyo50sAcm0RhLVWCMkQdRCGb9ucdYCbq5bRZ2LO1z71cWHTg9i+3kap8yphNMj+xRy9ZmBb2zqJhYfJdb8c6cPzeLuzwVLZE6x+nFpMGBvydV2QFLLCdCWSZJq8uuS7KBH9/p+6GktdNt75orb/rJzhOYC)
 
 As expected, you should get the same output if you run the script with the changes above.
 
@@ -395,6 +431,7 @@ const result = input.split(splitPattern);
 console.log(result);
 console.log(splitPattern);
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVQ7DsIwDGXOKSwmkEoXRnYkdgQLA6G1qCFNUD4gbs9rAqjqatmW388xYbVos1rX/S3M1FTJsZDzjVIlTuFhBLmPuO6n61+ak6/gmfO/Nz8NNJ3V4OX9y1HnUuDOmTZUdHGxI23kzkOqQJGV+K5y684iUeLpwB6LK3DFuOrFZPSbXPIUGrZcerfDrcijsI3Amtorl+BRdDmgfYpiv4uPeVEjT4GRQFJLvb5D7VLptG0DHkUDS9haAUjB4TkkMwDJgOpMwWJMxPIL+fd9ygCq4+Jk4AM=)
 
 The output is:
 ```text
@@ -413,7 +450,6 @@ The `repeat` quantifier (`*` in the standard RegExp) matches any number of times
 
 We will divide our text using both new lines and commas, but we want to get rid of all the spaces around the separator.
 
-
 ```javascriptwithcre
 const splitPattern = cre`
     repeat space;
@@ -421,6 +457,9 @@ const splitPattern = cre`
     repeat space;
 `;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1ZVS7jsIwELw6X7GiAsmX5srrT7oeQUOBSVZkwbGRHyD+nrEdUATtanfsmZ3ZmAAt2nz/tOMpfDXvm5wvcvHbNDVO4WIEuY/43XOvTXbqpGclVCrL18p2XsFLq2z0hQLUZ//+hV8ODYAr6vrmaHAp8OBMHxQdXBxIGzlzTiJktRLvqrT+W6RQPG3Y41EFfRlMbkxG38klT6Fjy7X3L/NDhoVthD6pP3INK0VXQj2mKHYC3hagTq4C80HYnkZ9hkNqZdC2DzguHWxk20yk8vAckslECqG2yLaci7eaKD8vVh1AdV58G3gA)
+
+The output is now:
 
 ```[
   '',
@@ -450,10 +489,11 @@ const splitPattern = cre`
     }
 `;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1dVS7TgMxEKT2V6xSJZK5hpIeiR5BQ4G5W3FLfDbygyiK8u8Z25fTKVJcrryPmdnZlFFajH186qbf+KBulVwLuXlWqtkp/lmB7xOmu+qqyqauiDzVQHkzyQ3lEt0uWn4GjSXbFQdsNHrczzurr2WEeovQuzV+O3gafY48ejtETd8+jWSs7LmYFcw7SUddv746GFUCvXNAew0JGGAPTNYcyedAsWfH7e9LoQA2F3YJFObhh5ufKfnq+ykncXPhj1qol3/BfoL7gSazxxK1yGjcEHF/ehDkugKk4Qgcsy1AKqCuMrtd87ubIV+PWktAdB28SbgA)
 
 The previous expression was surrounded by braces and after that
 `at-least-1` quantifier was applied to the entire group.
-You can put any number after the `at-least-` quantifier.
+You can put any number at the `at-least-` quantifier.
 
 Have a look if this modification does what we wanted:
 
@@ -510,6 +550,7 @@ const result = input.match(quotesExtract);
 console.log([...result]);
 console.log(quotesExtract);
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVSxDoIwEHXuV1y6EJPayc3ZuLk4EhKINKGmcEpplL/3rgUCrL2+6+u9e28I1NpW7nTW7csfxF7JtZDyIkSy0ycg0b7+BuaahJ3lzGWhlrl2owI6KBdgTBAClIIXW96oM/Z0CTNoxzgBBV+TORenzgMe4YnkKy3BV7aGR9W+PXY64e+ogE07NKYjHPgGg6tpAwjknDU94zheLDl+ekwLopPY9MYHx3QirSl+Nn87TsznRMnJEQlVUGld2cP+)
 
 We used character class here to match quotation mark `["]`,
 because it is simpler than `"\""`.
@@ -539,6 +580,7 @@ Our expression is now:
 ```javascriptwithcre
 const quotesExtract = cre.global`["], lazy-repeat any, ["]`;
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XZSxDsIgEIadeYoLS2OCTG7Oxs3FsWlSYkmKuRYtJYpP7wGtabtyfMfP3f03ekptFB6Osnu4Hdt2ctlIfmIs2+nlLck+f8aoNTd2bmfJKwGovoGoXNw+CKDT+k+nNUJUzeJ08wultwNdsgV0IZVBwFsXiKn0scoB7pbMJTk4ZRq4qe7pbC8zf7UConPHVvfEgWutx4bGgCBEo4fIxR1jyPbTY5KRnKxm0M5jlJNkTTto9cH9pHxeKyXZIlMVhZaRLfYD)
 
 The output is correct now:
 ```text
@@ -549,8 +591,7 @@ The output is correct now:
 /".*?"/gmsu
 ```
 
-The `lazy-` prefix can be applied to any quantifier,
-but it does not make sense for exact quantifier (`lazy-N-times`).
+The `lazy-` prefix can be applied to any quantifier.
 
 # Capturing
 
@@ -591,6 +632,7 @@ const result = input.matchAll(quotesExtract);
 console.log([...result].map(m => m.groups.quotation));
 console.log(quotesExtract);
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVQ9D4IwFHTmV7ywIAl2cpLoZtxcHAmJREioaSlSGq2/3vdavmTr0Lte79673iA1L8Ruz+RTb4J1kssgwzQI/Dq9jELZ509PWn2wY5wBTWwW5qk70EVnyAFE8bXI5A1HP+aL94nXFQzyeZbwgg+rziagIpDWGZTAu4qEcKGQ/xYeCteOhaALXsKtkK1WDfP4q0qAdrqvqwZxoGtlRIkDgiAheNURjtqHYyEMjzGS49V0lTaC5DhZcy39/T4exI+dk+HOeGCOiHYr4XgCyZz/mk1+xIhbwtacPw==)
 
 And see the result:
 
@@ -624,6 +666,7 @@ We need to adjust the output to see all the groups:
 ```javascriptwithcre
 console.log([...result].map(m => m.groups));
 ```
+[try it](https://kildom.github.io/cre-web-demo/#1XVS7DsIwDGTuV1hdAKlkYgLBhthYGBhQJSpa1KCkKU0rKIh/x3b6opmixGdffPGVFaaWkVoshb7biTdWciikv/Y8N06PyiDt3askrk7YVk6PfuzZD9e8oUBuyAo+fEDrJgtbnvC1q1aA7ukORUtF7xoLO32wfXzx7bNfOjLsSkjClfb3yNYUdQBmCrrm1AE8k6lSrCSJVsPV4KwKH2wkYzhGOrcmEw5/MAGQEZRpkiEObGoqFeOvQpBSMikIR5Yl0UWaYoLoODZFYitFdJhW72V/LZs35FujOuOgOWCIiHymYbMFLVg0O8foYfA40w8=)
 
 And finally we will get:
 

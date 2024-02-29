@@ -168,6 +168,31 @@ showdown.extension('gitHubAlerts', function () {
     return [myext1, myext2, myext3];
 });
 
+showdown.extension('tryItLink', function () {
+    let myext1 = {
+        type: 'output',
+        regex: cre.global.ignoreCase`
+            "<p";
+            optional {
+                whitespace;
+                lazy-repeat any;
+            }
+            ">"
+            repeat whitespace;
+            link: {
+                "<a";
+                whitespace;
+                lazy-repeat any;
+            }
+            ">try it</a>"
+            repeat whitespace;
+            "</p>"
+        `,
+        replace: '$1 class="try-it-link" target="cre-web-demo">try it</a>',
+    };
+    return [myext1];
+});
+
 
 let docsDir = 'docs';
 let webDir = 'web';
@@ -226,6 +251,7 @@ function convertMarkdown(fileName: string): string {
                 auto_detection: true,
             }),
             'gitHubAlerts',
+            'tryItLink',
         ],
         ghCompatibleHeaderId: true,
         simplifiedAutoLink: true,
