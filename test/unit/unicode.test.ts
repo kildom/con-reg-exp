@@ -15,7 +15,7 @@ describe('Unicode', () => {
     if (doUpgraded) {
 
         test('Upgraded unicode', () => {
-            expect(cre.unicode`[\w--_]`).toStrictEqual(new RegExp('[\\w--_]', 'msv'));
+            expect(cre.unicode`[\w--_]`).toStrictEqual(new RegExp('[\\w--_]', 'sv'));
         });
 
     } else {
