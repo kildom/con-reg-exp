@@ -684,14 +684,44 @@ And finally we will get:
 /"(?<quotation>(?<firstWord>\w*).*?)"/gmsu
 ```
 
-// TODO: The following is not implemented yet
-
 Positional capturing group uses integer as a name.
 As usual in regular expressions, it starts with `1`.
 Zero is reserved for entire match. The CRE will
 check if capturing groups are correctly numbered.
 
-// TODO: Example with replace the string
+We can do exercise using positional capturing groups.
+Let's replace quotation marks `"..."` with `«...»`.
+Prepare a new file `tutorial-5.mjs` for this:
+
+
+```javascriptwithcre
+import cre from "con-reg-exp";
+
+const quotesReplace = cre.global`
+    ["];
+    1: lazy-repeat any;
+    ["];
+`;
+
+const input = `
+    "Gregory, o' my word, we'll not carry coals." said Sampson.
+    "No, for then we should be colliers." replied Gregory.
+`;
+const result = input.replace(quotesReplace, '«$1»');
+
+console.log(result);
+console.log(quotesReplace);
+```
+[try it](https://kildom.github.io/cre-web-demo/#1XVRBCsIwEPTcVyxFCEIMFDzZB3jzoEcRDDbQSNpo0yDxSz7BW1/mJmlr6y0kmd3Znd1pLYaWXK03rLqZRfKv5FTINE+SuE4Pq5H2Ie5tFHaQM/ETe0rPeThkW1D85TBCbDT24ffhMsYLxoJxIjrdYULdOAqaQOVCYyg8BVEqiOH77uCqcd1YCobLAo68uhtds4jfawp+l9tS1IgDU2qrChwMBCklReNx3nUkGkGfjHk6kU0jjFWeTqA12tOsaAqkey+z7kNWfRWD6UQ03k4vZ1h8+wI=)
+
+We referenced capturing first group in the replacement string by `$1`.
+The output is as expected:
+
+```text
+    «Gregory, o' my word, we'll not carry coals.» said Sampson.
+    «No, for then we should be colliers.» replied Gregory.
+/"(.*?)"/gsu
+```
 
 When to use named and when positional capturing groups?
 * If you can access groups by its name, prefer named capturing groups
@@ -727,7 +757,7 @@ You must keep it in mind for Windows line endings `\r\n`.
 
 Now, we will make a script that prints a HTML containing the input
 string with annotations `w`, `bol`, `eol`, `bot`, `eot` for word, line, and text boundaries.
-Create script called `tutorial-5.mjs`.
+Create script called `tutorial-6.mjs`.
 
 ```javascriptwithcre
 import cre from "con-reg-exp";
@@ -770,7 +800,7 @@ characters.
 Run it redirecting output to an HTML file:
 
 ```bash
-node tutorial-5.mjs > tutorial-5.html
+node tutorial-6.mjs > tutorial-5.html
 ```
 
 When you open the HTML file you should see something like that:
@@ -871,7 +901,7 @@ console.log(`<pre>${boundaries.toString().replace(/</g, "&lt;")}</pre>`);
 Run it again:
 
 ```bash
-node tutorial-5.mjs > tutorial-5.html
+node tutorial-6.mjs > tutorial-5.html
 ```
 
 The resulting HTML is now:

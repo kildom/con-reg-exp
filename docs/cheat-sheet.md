@@ -10,7 +10,7 @@ Operator | Name | Precedence | Comment
 `{ }` | Brackets | 4 | Suggested for multi-line groups.
 &nbsp; | **UNARY (PREFIX)<br>OPERATORS**
 `not` | Complement | 3 | Applies only to some operands.
-`group` | Positional capturing<br>group | 3
+*`NUMBER`* `:` | Positional capturing<br>group | 3
 *`NAME`* `:` | Named capturing<br>group | 3
 `lookahead` | Lookahead assertion | 3
 `lookbehind` | lookbehind assertion | 3

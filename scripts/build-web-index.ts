@@ -59,7 +59,7 @@ function markdown(markdown: string, simple: boolean): string {
         html = html.replace(cre.global.ignoreCase`
             begin-of-text;
             "<", tag: repeat [a-z], lazy-repeat any, ">";
-            group repeat any;
+            2: repeat any;
             "</", match<tag>, ">", end-of-text;
             `, '$2');
     }

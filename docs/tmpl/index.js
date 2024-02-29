@@ -11,7 +11,7 @@ window.onload = function () {
             case_insensitive: false,
             keywords: {
                 $pattern: /[a-zA-Z0-9\\-]+/,
-                keyword: ['or', "match", "group", "not"],
+                keyword: ['or', "match", "not"],
                 literal: [
                     "any", "digit", "white-space", "whitespace", "word-char", "word-character",
                     "nl", "new-line", "lf", "line-feed", "cr", "carriage-return", "tab", "tabulation",

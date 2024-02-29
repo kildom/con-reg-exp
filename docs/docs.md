@@ -421,13 +421,24 @@ let match = input.match(cre`
 > For better readability and maintenance,
 > prefer named groups over positional.
 
-The positional capturing group that is identified as a index
-is using `group` operator followed by the node that should be captured.
+The positional capturing group uses integer as a capturing group name.
+The capturing group counts from `1`.
+It counts up for every capturing group (both named and positional) as in classic RegExp patterns.
+
+```javascriptwithcre
+let match = input.match(cre`
+    1: at-least-1 [a-zA-Z_.-];
+    "@";
+    2: at-least-1 [a-zA-Z_.-];
+`);
+```
+
+The capturing group numbers are validated, so counting it incorrectly will cause an error.
 
 ### Backreference
 
 You can match previously captured string using `match` operator followed by
-capturing group name or index enclosed by `< >`.
+capturing group name or number enclosed by `< >`.
 
 
 ```javascriptwithcre

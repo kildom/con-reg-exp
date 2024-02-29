@@ -75,7 +75,7 @@ let grammar = {
                 {
                     "match": cre.ignoreCase`
                         word-boundary;
-                        "match" or "group" or "not" or "or" or {
+                        "match" or "not" or "or" or {
                             optional ("lazy-" or "non-greedy-");
                             {
                                 optional "repeat-";
