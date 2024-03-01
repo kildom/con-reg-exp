@@ -214,6 +214,10 @@ div#text-content {
     padding-bottom: 100px;
 }
 
+#text-content:focus {
+    outline-width: 0;
+}
+
 pre code.hljs {
     display: block;
     overflow-x: auto;
@@ -315,22 +319,22 @@ pre code.hljs {
     background-color: #ffeef0
 }
 
-table, th, td {
+#text-content table, #text-content th, #text-content td {
     border-spacing: 0px;
     border-collapse: collapse;
 }
 
-th, td {
+#text-content th, #text-content td {
     border: 1px solid silver;
     padding: 10px;
 }
 
-th {
+#text-content th {
     background-color: #e7e7e7;
 }
 
 
-tr:nth-child(2n) {
+#text-content tr:nth-child(2n) {
     background-color: #F5F5F5;
 }
 
