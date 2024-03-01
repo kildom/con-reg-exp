@@ -63,6 +63,7 @@ async function showPatch() {
         outputFormat: 'line-by-line',
         drawFileList: false,
         matching: 'words',
+        colorScheme: new URL(window.location.href).pathname.endsWith('.html') ? 'light' : 'dark',
     });
     diff2htmlUi.draw();
 }
@@ -110,7 +111,7 @@ async function editPage() {
         await addScript('https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js');
         await addScript('https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.2.0/diff.js');
         diffTarget = document.createElement('div');
-        textDiv.parentElement.insertBefore(diffTarget, textDiv);
+        textDiv.parentElement.appendChild(diffTarget);
         setInterval(checkUpdates, 200);
     }
 }
