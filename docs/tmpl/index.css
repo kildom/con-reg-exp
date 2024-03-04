@@ -155,6 +155,26 @@ div.sample-part {
     color: #b1b1b1;
 }
 
+a.try-it-button {
+    display: block;
+    float: right;
+    padding: 8px 14px;
+    background: #344d83;
+    margin: 5px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    font-size: 110%;
+    box-shadow: inset 0px 0px 3px 2px #FFF1;
+}
+
+a.try-it-button:hover {
+    box-shadow: inset 0px 0px 3px 3px #FFF2;
+    color: white;
+    text-decoration: none;
+}
+
 /*---------------------------------------------------------------- DETAILS
 */
 

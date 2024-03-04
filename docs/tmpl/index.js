@@ -208,11 +208,12 @@ function nextScript() {
             nextEl: ".swiper-button-next",
             prevEl: ".swiper-button-prev",
         },
+        initialSlide: document.querySelectorAll('.swiper-slide').length - 2,
     });
 
     setupClicks();
 
-    swiper.slideTo(document.querySelectorAll('.swiper-slide').length - 2, 500);
-
     document.querySelector(".mySwiper").style.visibility = 'visible';
+
+    document.querySelector(".swiper-wrapper").style.width = '1px';
 }

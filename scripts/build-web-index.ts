@@ -6,6 +6,8 @@ import cre from '../src/con-reg-exp';
 
 import { template } from 'underscore';
 import { execFileSync } from 'node:child_process';
+import { TextEncoder } from 'node:util';
+import { deflateSync } from 'fflate';
 
 const copyFiles = {
     'docs/tmpl/index.js': 'web/index.js',
@@ -27,6 +29,7 @@ let templateData = {
         title: string,
         regexp: string,
         code: string,
+        demoURL: string,
     }[],
     sections: [] as {
         title: string,
@@ -158,6 +161,18 @@ function processSections(contentText: string) {
     }
 }
 
+const dictionaryText = "JSON.stringify(.parse( RegExp(.input(.lastMatch(.lastParen(.leftContext(.rightContext(.compile(.exec(.test(.toString(.replace(.match(.matchAll(;\n                                // `;\n\n    \n\nconsole.log(\n\nconst \n\nlet undefined \n\nvar \n\nif (\n\nfor (\n\nwhile (\n\nswitch (    case of in instanceof new true false do {\n    this. break;\n return    } else {\n        } or {\n        ) {\n        }\n);\n\n`;\n\n';\n\n\";\n\n/* */\n\n// = + - * / || && += -= *= ++;\n --;\n == === !== != >= <= < > ?? & | ~ ^ << >> >>> ... \nimport cre from 'con-reg-exp';\n\nimport cre from \"con-reg-exp\";\n\n = cre`.indices`.global`.ignoreCase`.legacy`.unicode`.sticky`.cache`optional begin-of-text; end-of-text; begin-of-line; end-of-line; word-boundary; repeat at-least-1 at-most-times -to- not new-line; line-feed; carriage-return; tabulation; null; space; any; digit; white-space; whitespace; word-character; line-terminator; prop< property< lookahead look-ahead lookbehind look-behind group \"${}\" '${}' ${ ";
+const encoder = new TextEncoder();
+const dictionary = encoder.encode(JSON.stringify(dictionaryText));
+
+function createDemoURL(fileName: string, code: string): string {
+    let textData = fileName + '\0' + code;
+    let data = encoder.encode(textData);
+    let output = deflateSync(data, { level: 9, dictionary, mem: 9 });
+    let url = 'https://kildom.github.io/cre-web-demo/#1' + Buffer.from(output).toString('base64');
+    return url;
+}
+
 function processSamples() {
     for (let file of fs.readdirSync('docs/samples').sort()) {
         if (!file.endsWith('.mjs')) continue;
@@ -192,6 +207,7 @@ function processSamples() {
             title,
             code,
             regexp: regexpSplitted.join('↩\n'),
+            demoURL: createDemoURL(file.replace(cre`begin-of-text, repeat digit, "."`, ''), sourceCode),
         });
     }
 }

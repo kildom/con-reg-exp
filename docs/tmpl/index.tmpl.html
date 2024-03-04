@@ -1,5 +1,6 @@
 <html>
 <head>
+    <title>Convenient Regular Expressions</title>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="con-reg-exp.min.js"></script>
@@ -32,6 +33,7 @@
                     <% for (sample of samples) { %>
                     <div class="swiper-slide">
                         <div class="sample">
+                            <a href="<%- sample.demoURL %>" target="cre-web-demo" class="try-it-button">▶&nbsp;&nbsp;Try it</a>
                             <pre class="sample-title language-javascriptwithcre">// <%- sample.title %></pre>
                             <div class="sample-part">Classic</div>
                             <pre
