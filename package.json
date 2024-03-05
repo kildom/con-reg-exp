@@ -33,8 +33,7 @@
     "prebuild": "npx esbuild --target=chrome62,edge79,firefox53,safari11 --bundle --global-name=GtEa1M6 --sourcemap=linked --minify src/con-reg-exp.ts --outfile=dist/browser/con-reg-exp.min.js && npx esbuild --target=chrome62,edge79,firefox53,safari11 --bundle --global-name=GtEa1M6 --sourcemap=linked src/con-reg-exp.ts --outfile=dist/browser/con-reg-exp.js",
     "build": "npx tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json",
     "postbuild": "npx ts-node --swc scripts/postbuild.ts",
-    "prebuild-web": "npx ts-node --swc scripts/build-docs.ts",
-    "build-web": "npx ts-node --swc scripts/build-web-index.ts",
+    "build-web": "npx tsx scripts/build-web/build.ts",
     "test": "npm run test-unit run && npm run test-imports",
     "test-unit": "npx vitest",
     "test-imports": "npx ts-node --swc test/test-imports/run-test.ts"

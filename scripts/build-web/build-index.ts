@@ -2,22 +2,27 @@
 import * as fs from 'node:fs';
 
 import * as showdown from 'showdown';
-import cre from '../src/con-reg-exp';
+import cre from '../../src/con-reg-exp';
 
 import { template } from 'underscore';
 import { execFileSync } from 'node:child_process';
 import { TextEncoder } from 'node:util';
 import { deflateSync } from 'fflate';
+import { convertMarkdownText, removeTopLevelTag } from './markdown';
+import { TMPL_DIR } from './config';
 
-const copyFiles = {
-    'docs/tmpl/index.js': 'web/index.js',
-    'docs/tmpl/index.css': 'web/index.css',
-    'docs/tmpl/npm.svg': 'web/npm.svg',
-    'docs/tmpl/github-mark.svg': 'web/github-mark.svg',
-    'docs/tmpl/docs.css': 'web/docs.css',
-    'docs/tmpl/docs.js': 'web/docs.js',
-    'dist/browser/con-reg-exp.min.js': 'web/con-reg-exp.min.js',
+
+interface Sources {
+    menuText: string,
+    title: string,
+    subtitlesText: string,
+    contentText: string,
 };
+
+
+const dictionaryText = "JSON.stringify(.parse( RegExp(.input(.lastMatch(.lastParen(.leftContext(.rightContext(.compile(.exec(.test(.toString(.replace(.match(.matchAll(;\n                                // `;\n\n    \n\nconsole.log(\n\nconst \n\nlet undefined \n\nvar \n\nif (\n\nfor (\n\nwhile (\n\nswitch (    case of in instanceof new true false do {\n    this. break;\n return    } else {\n        } or {\n        ) {\n        }\n);\n\n`;\n\n';\n\n\";\n\n/* */\n\n// = + - * / || && += -= *= ++;\n --;\n == === !== != >= <= < > ?? & | ~ ^ << >> >>> ... \nimport cre from 'con-reg-exp';\n\nimport cre from \"con-reg-exp\";\n\n = cre`.indices`.global`.ignoreCase`.legacy`.unicode`.sticky`.cache`optional begin-of-text; end-of-text; begin-of-line; end-of-line; word-boundary; repeat at-least-1 at-most-times -to- not new-line; line-feed; carriage-return; tabulation; null; space; any; digit; white-space; whitespace; word-character; line-terminator; prop< property< lookahead look-ahead lookbehind look-behind group \"${}\" '${}' ${ ";
+const encoder = new TextEncoder();
+const dictionary = encoder.encode(JSON.stringify(dictionaryText));
 
 let templateData = {
     title: '',
@@ -40,61 +45,38 @@ let templateData = {
         simple: boolean,
     }[],
     getHtmlId: getHtmlId,
+    removeTopLevelTag: removeTopLevelTag,
 };
 
-function markdown(markdown: string, simple: boolean): string {
-    let mdConverter = new showdown.Converter({
-        /*extensions: [
-            showdownHighlight({
-                pre: true,
-                auto_detection: true,
-            }),
-            'gitHubAlerts',
-        ],*/
-        ghCompatibleHeaderId: true,
-        //openLinksInNewWindow: true,
-        //prefixHeaderId: `...`,
-        simplifiedAutoLink: true,
-        tables: true,
-        ghCodeBlocks: true,
-    });
-    let html = mdConverter.makeHtml(markdown);
-    if (simple) {
-        html = html.replace(cre.global.ignoreCase`
-            begin-of-text;
-            "<", tag: repeat [a-z], lazy-repeat any, ">";
-            2: repeat any;
-            "</", match<tag>, ">", end-of-text;
-            `, '$2');
-    }
-    return html;
-}
-
 function getHtmlId(markdownText: string): string {
-    let x = markdown('#' + markdownText.trim(), false);
+    let x = convertMarkdownText('#' + markdownText.trim(), false);
     return x.match(cre`"id=\"", id: lazy-repeat any, "\""`)?.groups?.id || '';
 }
 
-let indexText = fs.readFileSync('docs/index.md', 'utf8');
+function readSources(): Sources {
 
-let m = indexText.match(cre`
-    menuText: lazy-repeat any;
-    begin-of-line, "#";
-    at-least-1 whitespace;
-    title: repeat (not term);
-    subtitlesText: lazy-repeat any;
-    contentText: (begin-of-line, "#", repeat any);
-`);
+    let indexText = fs.readFileSync('docs/index.md', 'utf8');
 
-let { menuText, title, subtitlesText, contentText } = m?.groups as { [key: string]: string; };
-templateData.title = markdown(title, true);
-templateData.copy = markdown(contentText.match(cre.cache`
-    begin-of-line;
-    copy: {
-        repeat not term;
-        "Copyright";
-        repeat not term;
-    }`)?.groups?.copy?.trim() || '', true);
+    let m = indexText.match(cre`
+        menuText: lazy-repeat any;
+        begin-of-line, "#";
+        at-least-1 whitespace;
+        title: repeat (not term);
+        subtitlesText: lazy-repeat any;
+        contentText: (begin-of-line, "#", repeat any);
+    `);
+
+    let sources: Sources = m?.groups as any;
+    templateData.title = convertMarkdownText(sources.title, true);
+    templateData.copy = convertMarkdownText(sources.contentText.match(cre.cache`
+        begin-of-line;
+        copy: {
+            repeat not term;
+            "Copyright";
+            repeat not term;
+        }`)?.groups?.copy?.trim() || '', true);
+    return sources;
+}
 
 function processMenu(menuText: string) {
     let all = menuText.matchAll(cre.global.cache`
@@ -105,7 +87,7 @@ function processMenu(menuText: string) {
         item: repeat not term;
     `);
     for (let item of [...all].map(m => m.groups!.item as string)) {
-        templateData.menu.push(markdown(item, true));
+        templateData.menu.push(convertMarkdownText(item, true));
     }
 }
 
@@ -149,21 +131,17 @@ function processSections(contentText: string) {
     for (let sec of list) {
         let subList = parseSections(sec.content, 3);
         let sub = subList.map(subSection => ({
-            title: markdown(subSection.title, true),
-            html: markdown(subSection.content, false),
+            title: convertMarkdownText(subSection.title, true),
+            html: convertMarkdownText(subSection.content, false),
         }));
         let simple = !sub.some(x => x.html.indexOf('<pre') >= 0)
         templateData.sections.push({
-            title: markdown(sec.title, true),
+            title: convertMarkdownText(sec.title, true),
             simple,
             sub,
         })
     }
 }
-
-const dictionaryText = "JSON.stringify(.parse( RegExp(.input(.lastMatch(.lastParen(.leftContext(.rightContext(.compile(.exec(.test(.toString(.replace(.match(.matchAll(;\n                                // `;\n\n    \n\nconsole.log(\n\nconst \n\nlet undefined \n\nvar \n\nif (\n\nfor (\n\nwhile (\n\nswitch (    case of in instanceof new true false do {\n    this. break;\n return    } else {\n        } or {\n        ) {\n        }\n);\n\n`;\n\n';\n\n\";\n\n/* */\n\n// = + - * / || && += -= *= ++;\n --;\n == === !== != >= <= < > ?? & | ~ ^ << >> >>> ... \nimport cre from 'con-reg-exp';\n\nimport cre from \"con-reg-exp\";\n\n = cre`.indices`.global`.ignoreCase`.legacy`.unicode`.sticky`.cache`optional begin-of-text; end-of-text; begin-of-line; end-of-line; word-boundary; repeat at-least-1 at-most-times -to- not new-line; line-feed; carriage-return; tabulation; null; space; any; digit; white-space; whitespace; word-character; line-terminator; prop< property< lookahead look-ahead lookbehind look-behind group \"${}\" '${}' ${ ";
-const encoder = new TextEncoder();
-const dictionary = encoder.encode(JSON.stringify(dictionaryText));
 
 function createDemoURL(fileName: string, code: string): string {
     let textData = fileName + '\0' + code;
@@ -171,6 +149,10 @@ function createDemoURL(fileName: string, code: string): string {
     let output = deflateSync(data, { level: 9, dictionary, mem: 9 });
     let url = 'https://kildom.github.io/cre-web-demo/#1' + Buffer.from(output).toString('base64');
     return url;
+}
+
+function markdownHighlight(code: string, language: string) {
+    return convertMarkdownText('```' + language + '\n' + code.trimEnd() + '\n```', true);
 }
 
 function processSamples() {
@@ -204,30 +186,24 @@ function processSamples() {
             regexp = regexp.substring(regexpLineLength);
         }
         templateData.samples.push({
-            title,
-            code,
-            regexp: regexpSplitted.join('↩\n'),
+            title: markdownHighlight('// ' + title, 'javascript'),
+            code: markdownHighlight(code, 'javascriptwithcre'),
+            regexp: markdownHighlight(regexpSplitted.join('↩'), 'javascript').replace(/↩/g, '↩\n'),
             demoURL: createDemoURL(file.replace(cre`begin-of-text, repeat digit, "."`, ''), sourceCode),
         });
     }
 }
 
-async function main() {
-    processMenu(menuText);
-    processSubtitle(subtitlesText);
-    processSections(contentText);
+export function buildIndex() {
+    let sources = readSources();
+    processMenu(sources.menuText);
+    processSubtitle(sources.subtitlesText);
+    processSections(sources.contentText);
     processSamples();
 
-    //console.log(require('util').inspect(templateData, false, null, true))
-
-    let templateText = fs.readFileSync(`docs/tmpl/index.tmpl.html`, 'utf-8');
+    let templateText = fs.readFileSync(`${TMPL_DIR}/index.tmpl.html`, 'utf-8');
     let compiled = template(templateText);
     let output = compiled(templateData);
     fs.mkdirSync('web', { recursive: true });
     fs.writeFileSync('web/index.html', output);
-    for (let [from, to] of Object.entries(copyFiles)) {
-        fs.copyFileSync(from, to);
-    }
 }
-
-main();
