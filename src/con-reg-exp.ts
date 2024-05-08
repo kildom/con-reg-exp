@@ -445,6 +445,8 @@ class Context {
     private interpolationStack: InterpolationBeginToken[] = [];
     private lastGroupIndex = 0;
     private boundaryTypes = ContextBoundaryTypes.NONE;
+    public prefixLabel: string = '';
+    public prefixIndex: number = 0;
 
     public constructor(
         public info: ExpressionTokenized,
@@ -555,6 +557,10 @@ class Context {
 
     public reserveGroupIndex() {
         this.lastGroupIndex++;
+        return this.lastGroupIndex;
+    }
+
+    public getNextGroupIndex() {
         return this.lastGroupIndex;
     }
 
@@ -911,12 +917,12 @@ class Group extends Node {
             obj = new Group();
             obj.index = ctx.reserveGroupIndex();
             if (token.text.match(/^[0-9]+$/)) {
-                let providedIndex = parseInt(token.text);
+                let providedIndex = ctx.prefixIndex + parseInt(token.text);
                 if (providedIndex != obj.index) {
                     throw ctx.error(token, `Mismatching positional capturing group. Provided ${providedIndex}, expected ${obj.index}.`);
                 }
             } else {
-                obj.name = token.text;
+                obj.name = ctx.prefixLabel + token.text;
             }
             obj.child = parseLeaf(ctx);
         }
@@ -929,6 +935,42 @@ class Group extends Node {
         } else {
             return `(?<${this.name}>${this.child.generate()})`;
         }
+    }
+}
+
+
+class Prefix extends Node {
+
+    private child!: Node;
+
+    public static create(token: Token, ctx: Context) {
+        let obj: Prefix | undefined = undefined;
+        if (token.type === TokenType.Keyword && token.text === 'prefix') {
+            obj = new Prefix();
+            let id = ctx.read();
+            if (id?.type !== TokenType.Identifier) {
+                throw ctx.error(id || token, 'Expecting identifier or index after "prefix".');
+            }
+            let oldPrefixIndex = ctx.prefixIndex;
+            let oldPrefixLabel = ctx.prefixLabel;
+            ctx.prefixIndex = ctx.getNextGroupIndex();
+            if (id.text.match(/^[0-9]+$/)) {
+                let providedIndex = parseInt(id.text);
+                if (providedIndex != ctx.prefixIndex) {
+                    throw ctx.error(id, `Mismatching prefix for positional capturing groups. Provided ${providedIndex}, expected ${ctx.prefixIndex}.`);
+                }
+            } else {
+                ctx.prefixLabel += id.text;
+            }
+            obj.child = parseLeaf(ctx);
+            ctx.prefixLabel = oldPrefixLabel;
+            ctx.prefixIndex = oldPrefixIndex;
+        }
+        return obj;
+    }
+
+    public generate(): string {
+        return this.child.generate();
     }
 }
 
@@ -1147,6 +1189,7 @@ function parseLeaf(ctx: Context): Node {
             || LineBoundary.create(token, ctx)
             || TextBoundary.create(token, ctx)
             || Group.create(token, ctx)
+            || Prefix.create(token, ctx)
             || LookGroup.create(token, ctx)
             || Quantifier.create(token, ctx)
             ;
